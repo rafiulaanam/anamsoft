@@ -16,7 +16,7 @@ interface AccordionProps {
 }
 
 export function Accordion({ items, defaultOpenId }: AccordionProps) {
-  const [openId, setOpenId] = React.useState(defaultOpenId ?? items[0]?.id);
+  const [openId, setOpenId] = React.useState<string | undefined>(defaultOpenId ?? items[0]?.id);
 
   return (
     <div className="space-y-3">

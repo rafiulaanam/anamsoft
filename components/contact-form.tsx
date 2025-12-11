@@ -26,6 +26,7 @@ export function ContactForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message?: string }>({ type: "idle" });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (key: keyof FormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -47,11 +48,32 @@ export function ContactForm() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!validate()) return;
-    setStatus({ type: "success", message: "Thanks! I will reply with a tailored audit shortly." });
-    setForm(initialState);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          salonName: form.salon,
+          website: form.website || undefined,
+          message: form.message,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Failed to send message");
+      }
+      setStatus({ type: "success", message: "Thanks! I will reply with a tailored audit shortly." });
+      setForm(initialState);
+    } catch (err: any) {
+      setStatus({ type: "error", message: err?.message || "Something went wrong. Please try again." });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -110,13 +132,19 @@ export function ContactForm() {
         />
         {errors.message && <p className="text-xs text-rose-600">{errors.message}</p>}
       </div>
-      {status.type === "success" && (
-        <div className="rounded-lg border border-blush-200 bg-blush-50 px-4 py-3 text-sm text-blush-800">
+      {status.type !== "idle" && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            status.type === "success"
+              ? "border-blush-200 bg-blush-50 text-blush-800"
+              : "border-rose-200 bg-rose-50 text-rose-700"
+          }`}
+        >
           {status.message}
         </div>
       )}
-      <Button type="submit" size="lg" className="w-full hover:-translate-y-[1px]">
-        Send message
+      <Button type="submit" size="lg" className="w-full hover:-translate-y-[1px]" disabled={submitting}>
+        {submitting ? "Sending..." : "Send message"}
       </Button>
     </form>
   );

@@ -1,53 +1,11 @@
+import { prisma } from "@/lib/db";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Accordion } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { ContactForm } from "@/components/contact-form";
+import { LocalBusinessSchema } from "@/components/seo/local-business-schema";
 import { CalendarClock, Palette, Sparkles, Workflow } from "lucide-react";
-
-const services = [
-  {
-    title: "Starter Salon Website",
-    desc: "For solo stylists and boutique salons in Vilnius who need a fast, polished web presence.",
-    items: [
-      "1–3 pages (Home, Services/Prices, Contact)",
-      "Mobile-friendly design",
-      "Booking link integration (Fresha, Treatwell, WhatsApp or phone)",
-      "Basic SEO setup (Google-friendly titles & descriptions)",
-      "Delivery in about 7 days after receiving content",
-    ],
-    price: "from 450 €",
-  },
-  {
-    title: "Booking-Optimised Website",
-    desc: "Designed to convert visitors into bookings for nail, hair, lash, and facial services.",
-    items: [
-      "4–6 pages (Home, Services, Prices, Gallery, About, Contact)",
-      "Clear “Book now” buttons and calls-to-action",
-      "Integration with Fresha/Treatwell or custom contact form",
-      "Service pages for key treatments (hair, nails, lashes, facials, etc.)",
-      "Google Maps & basic review highlights",
-      "1 month of small text/image tweaks after launch",
-    ],
-    price: "from 800 €",
-  },
-  {
-    title: "Premium Beauty & Spa Website",
-    desc: "A flagship site for established spas and multi-service studios looking for depth and polish.",
-    items: [
-      "Up to 8–10 pages",
-      "Multi-language (LT + EN)",
-      "Dedicated gallery & before/after sections with modest, professional photos",
-      "Separate team page (stylists, therapists)",
-      "Extra performance optimisation & stronger SEO foundation",
-      "Priority support for 1 month after launch",
-    ],
-    price: "from 1,200 €",
-  },
-];
 
 const steps = [
   {
@@ -69,30 +27,6 @@ const steps = [
     title: "Launch & support",
     desc: "I put the site live on your domain, connect booking links, and support you with small updates after launch.",
     icon: Sparkles,
-  },
-];
-
-const portfolio = [
-  {
-    name: "Vilnius Lash & Brow Studio",
-    type: "Lash & brow studio",
-    desc: "A clean, mobile-first website with service list, gallery and clear “Book now” buttons linking to the studio’s booking system.",
-    highlight: "Strong focus on before/after gallery and easy booking from mobile.",
-    url: "https://example.com/lash-brow",
-  },
-  {
-    name: "Old Town Spa & Wellness",
-    type: "Day spa",
-    desc: "A calming website for a spa in Vilnius Old Town, with spa packages, treatments overview, gift voucher information and directions.",
-    highlight: "Relaxing visual style and clear information for tourists and locals.",
-    url: "https://example.com/old-town-spa",
-  },
-  {
-    name: "Naujamiestis Hair & Nail Studio",
-    type: "Hair & nail salon",
-    desc: "Modern website combining hair and nail services, price list, team section and social media integration.",
-    highlight: "Simple structure and fast mobile performance.",
-    url: "https://example.com/naujamiestis-hair-nail",
   },
 ];
 
@@ -138,14 +72,32 @@ const testimonials = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
   const year = new Date().getFullYear();
+
+  const siteConfig = (await prisma.siteConfig.findFirst()) ?? null;
+  const services = await prisma.service.findMany({ orderBy: { createdAt: "asc" } });
+  const portfolioItems = await prisma.portfolioItem.findMany({ orderBy: { createdAt: "desc" } });
 
   return (
     <main className="min-h-screen bg-blush-50">
       <div className="absolute inset-0 -z-10 gradient-blob" aria-hidden />
 
       <Navbar />
+      <LocalBusinessSchema
+        name="Anam Soft"
+        url="https://anamsoft.com"
+        telephone="+370 611 04553"
+        email={siteConfig?.email ?? "hello@anamsoft.com"}
+        address={{
+          streetAddress: "Vilnius",
+          addressLocality: "Vilnius",
+          addressRegion: "Vilnius County",
+          postalCode: "LT-00000",
+          addressCountry: "LT",
+        }}
+        sameAs={[]}
+      />
 
       {/* Hero */}
       <section id="home" className="section-shell flex flex-col gap-12 py-16 md:py-20 lg:py-24 scroll-mt-20">
@@ -155,11 +107,11 @@ export default function HomePage() {
               Beauty, hair, nails, spa — Vilnius
             </div>
             <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-tight text-slate-900 drop-shadow-sm">
-              Websites for beauty salons & spas in Vilnius
+              {siteConfig?.heroTitle ?? "Websites for beauty salons & spas in Vilnius"}
             </h1>
             <p className="text-lg text-slate-700 leading-relaxed max-w-2xl">
-              At AnamSoftStudio, I build modern, mobile-friendly websites for beauty salons, nail & hair
-              studios, and spas in Vilnius so they can get more online bookings and loyal clients.
+              {siteConfig?.heroSubtitle ??
+                "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients."}
             </p>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Button size="lg" className="shadow-soft hover:shadow-lg hover:-translate-y-[1px]" asChild>
@@ -170,8 +122,9 @@ export default function HomePage() {
               </Button>
             </div>
             <span className="text-sm text-slate-600">
-                Or message me on WhatsApp: <span className="font-semibold text-blush-700">+370 XXX XXXX</span>
-              </span>
+              Or message me on WhatsApp:{" "}
+              <span className="font-semibold text-blush-700">{siteConfig?.whatsapp ?? "+370 611 04553"}</span>
+            </span>
             <div className="flex flex-wrap gap-3 text-sm text-slate-600">
               <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-sm">
                 <span className="h-2 w-2 rounded-full bg-blush-500" /> Mobile-first builds
@@ -236,7 +189,7 @@ export default function HomePage() {
               Websites for beauty & wellness businesses
             </h2>
             <p className="text-slate-700 leading-relaxed">
-              AnamSoftStudio specialises in websites for beauty & hair salons, nail & lash studios, and day spas or wellness centres in Vilnius. Your clients often find you through Google, Instagram, and booking platforms—your website should support each of these channels with clear offers and easy booking paths.
+              Anam Soft specialises in websites for beauty & hair salons, nail & lash studios, and day spas or wellness centres in Vilnius. Your clients often find you through Google, Instagram, and booking platforms—your website should support each of these channels with clear offers and easy booking paths.
             </p>
             <div className="grid gap-3 sm:grid-cols-3 text-sm text-slate-700">
               <div className="rounded-xl border border-blush-100 bg-white/70 p-4 shadow-sm">
@@ -262,35 +215,37 @@ export default function HomePage() {
             Whether you are opening your first studio or refreshing an established spa, I match the build to your goals and timeline.
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {services.map((service) => (
-            <Card
-              key={service.title}
-              className="flex flex-col hover:-translate-y-1 hover:shadow-xl"
-            >
-              <CardHeader>
-                <CardTitle>{service.title}</CardTitle>
-                <CardDescription>{service.desc}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4">
-                <ul className="space-y-3 text-sm text-slate-700">
-                  {service.items.map((item) => (
-                    <li key={item} className="flex items-start gap-2">
-                      <span className="mt-1 h-2 w-2 rounded-full bg-blush-500" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-auto flex items-center justify-between pt-4">
-                  <p className="text-base font-semibold text-blush-700">{service.price}</p>
-                  <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
-                    <a href="#contact">Discuss</a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {services.length === 0 ? (
+          <p className="text-sm text-slate-600">No services configured yet.</p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+            {services.map((service) => (
+              <Card key={service.id} className="flex flex-col hover:-translate-y-1 hover:shadow-xl">
+                <CardHeader>
+                  <CardTitle>{service.name}</CardTitle>
+                  <CardDescription>{service.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between text-sm text-slate-700">
+                    <span className="font-semibold text-blush-700">
+                      {service.priceFrom ? `from €${service.priceFrom}` : "Price on request"}
+                    </span>
+                    {service.isFeatured && (
+                      <span className="rounded-full bg-blush-100 px-3 py-1 text-xs font-semibold text-blush-700">
+                        Featured
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-auto flex items-center justify-between pt-4">
+                    <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
+                      <a href="#contact">Contact about this package</a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Process */}
@@ -337,34 +292,39 @@ export default function HomePage() {
             Example site experiences crafted for Vilnius-based salons and spas.
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {portfolio.map((project, idx) => (
-            <Card
-              key={project.name}
-              className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
-              <div className="relative p-6 space-y-4">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
-                  Case {idx + 1}
+        {portfolioItems.length === 0 ? (
+          <p className="text-sm text-slate-600">No portfolio items yet.</p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-3">
+            {portfolioItems.map((project, idx) => (
+              <Card
+                key={project.id}
+                className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
+                <div className="relative p-6 space-y-4">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
+                    Case {idx + 1}
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-semibold text-slate-900">{project.title}</h3>
+                    <p className="text-sm font-medium text-blush-700">{project.type}</p>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
+                  {project.demoUrl ? (
+                    <div className="mt-2">
+                      <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
+                        <a href={project.demoUrl} target="_blank" rel="noreferrer">
+                          View project
+                        </a>
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-semibold text-slate-900">{project.name}</h3>
-                  <p className="text-sm font-medium text-blush-700">{project.type}</p>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">{project.desc}</p>
-                <p className="text-sm text-slate-700 leading-relaxed font-medium">{project.highlight}</p>
-                <div className="mt-2">
-                  <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
-                    <a href={project.url} target="_blank" rel="noreferrer">
-                      View project
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Testimonials */}
@@ -373,7 +333,7 @@ export default function HomePage() {
           <span className="text-sm font-semibold text-blush-700">Testimonials</span>
           <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">What clients say</h2>
           <p className="text-slate-600 max-w-2xl">
-            Short notes from salon owners who partnered with AnamSoftStudio.
+            Short notes from salon owners who partnered with Anam Soft.
           </p>
         </div>
         <div className="grid gap-6 md:grid-cols-2">
@@ -396,7 +356,7 @@ export default function HomePage() {
         <div className="card-surface overflow-hidden hover:shadow-xl hover:-translate-y-1">
           <div className="grid gap-6 md:grid-cols-[1fr,1.2fr] items-center">
             <div className="bg-gradient-to-br from-blush-100 via-white to-blush-50 h-full w-full p-10 flex flex-col justify-center">
-              <h3 className="text-2xl font-semibold text-slate-900">About AnamSoftStudio</h3>
+              <h3 className="text-2xl font-semibold text-slate-900">About Anam Soft</h3>
               <p className="mt-4 text-slate-700 leading-relaxed">
                 I am Rafi, founder and web developer based in Vilnius, specialising in beauty & wellness businesses. I combine thoughtful UX, booking-focused copy, and fast tech to help salons turn visitors into loyal clients.
               </p>
@@ -452,14 +412,17 @@ export default function HomePage() {
             <div className="space-y-3 text-sm text-slate-700">
               <div>
                 <span className="font-semibold">Email:</span>{" "}
-                <a className="hover:text-blush-700" href="mailto:hello@anamsoft.com">
-                  hello@anamsoft.com
+                <a className="hover:text-blush-700" href={`mailto:${siteConfig?.email ?? "hello@anamsoft.com"}`}>
+                  {siteConfig?.email ?? "hello@anamsoft.com"}
                 </a>
               </div>
               <div>
                 <span className="font-semibold">WhatsApp / phone:</span>{" "}
-                <a className="hover:text-blush-700" href="https://wa.me/37061104553">
-                  +370 611 04553
+                <a
+                  className="hover:text-blush-700"
+                  href={`https://wa.me/${(siteConfig?.whatsapp ?? "+370 611 04553").replace(/\\D/g, "")}`}
+                >
+                  {siteConfig?.whatsapp ?? "+370 611 04553"}
                 </a>
               </div>
               <div>
@@ -477,7 +440,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white/80">
         <div className="section-shell py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
-          <span>© {year} AnamSoftStudio</span>
+          <span>© {year} Anam Soft</span>
           <div className="flex gap-4">
             <a href="#services" className="hover:text-blush-700">Services</a>
             <a href="#portfolio" className="hover:text-blush-700">Portfolio</a>
