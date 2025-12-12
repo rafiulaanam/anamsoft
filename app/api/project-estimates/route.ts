@@ -5,7 +5,16 @@ import {
   sendProjectEstimateClientConfirmation,
 } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
+
 export async function POST(req: NextRequest) {
+  if (isBuild) {
+    return NextResponse.json({ data: null }, { status: 200 });
+  }
   try {
     if (!(prisma as any)?.projectEstimate) {
       throw new Error("ProjectEstimate model is not available. Did you restart after running prisma generate?");
@@ -47,7 +56,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const siteConfig = await prisma.siteConfig.findFirst();
+    const siteConfig = await prisma.siteConfig.findFirst().catch((err) => {
+      console.error("Error loading siteConfig", err);
+      return null;
+    });
 
     if (siteConfig?.sendAdminLeadEmails) {
       void sendProjectEstimateAdminNotification(
@@ -65,7 +77,7 @@ export async function POST(req: NextRequest) {
           goals: estimate.goals ?? undefined,
         },
         { siteName: siteConfig.heroTitle, email: siteConfig.email }
-      );
+      ).catch((err) => console.error("Admin email send failed", err));
     }
 
     if (siteConfig?.sendClientLeadEmails) {
@@ -84,7 +96,7 @@ export async function POST(req: NextRequest) {
           goals: estimate.goals ?? undefined,
         },
         { siteName: siteConfig.heroTitle, email: siteConfig.email }
-      );
+      ).catch((err) => console.error("Client email send failed", err));
     }
 
     return NextResponse.json({ data: estimate }, { status: 201 });
@@ -98,6 +110,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  if (isBuild) {
+    return NextResponse.json({ data: [] });
+  }
   try {
     const estimates = await prisma.projectEstimate.findMany({
       orderBy: { createdAt: "desc" },
