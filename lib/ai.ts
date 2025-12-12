@@ -95,7 +95,7 @@ End with your name (Rafiul Anam) and THESE exact contact details (do not invent 
     model: "gpt-4.1-mini",
     messages: [
       {
-        role: "system",
+        role: "system",  
         content:
           "You are an assistant that writes professional, friendly client emails for a small web agency called AnamSoft in Vilnius. You always sound clear, respectful and practical.",
       },
