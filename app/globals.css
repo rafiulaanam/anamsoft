@@ -37,3 +37,43 @@ a {
     radial-gradient(circle at 80% 0%, rgba(255, 128, 164, 0.2), transparent 25%),
     radial-gradient(circle at 50% 80%, rgba(242, 85, 138, 0.15), transparent 30%);
 }
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatSoft {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.8s ease-out both;
+  will-change: opacity, transform;
+}
+
+.float-soft {
+  animation: floatSoft 6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .float-soft {
+    animation: none;
+  }
+}

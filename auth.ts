@@ -27,6 +27,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const isValid = await compare(password, user.hashedPassword);
         if (!isValid) return null;
 
+        if (!user.emailVerified) {
+          throw new Error("Please verify your email before signing in.");
+        }
+
         return {
           id: user.id,
           name: user.name ?? user.email,

@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/db";
-import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { Accordion } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ContactForm } from "@/components/contact-form";
 import { LocalBusinessSchema } from "@/components/seo/local-business-schema";
 import { CalendarClock, Palette, Sparkles, Workflow } from "lucide-react";
+import { ContactSection } from "@/components/sections/contact-section";
+import { Navbar } from "@/components/navbar";
+import { PricingSection } from "@/components/sections/pricing-section";
+import { ProjectEstimatorWizard } from "@/components/sections/project-estimator-wizard";
+import { ConsultationBookingSection } from "@/components/sections/consultation-booking-section";
 
 const steps = [
   {
@@ -60,15 +65,44 @@ const faqs = [
 const testimonials = [
   {
     name: "Laura",
-    role: "Owner, Lash & Brow Studio",
+    salon: "Lash & Brow Studio",
     quote:
       "The site looks elegant and makes it easy for clients to book from their phones. We had bookings coming in the first week after launch.",
   },
   {
     name: "Eglė",
-    role: "Owner, Vilnius Salon",
-    quote:
-      "Clear process, great communication, and a website that finally reflects our services. I don’t have to worry about the tech side at all.",
+    salon: "Vilnius Salon",
+    quote: "Clear process, great communication, and a website that finally reflects our services.",
+  },
+  {
+    name: "Monika",
+    salon: "Old Town Spa",
+    quote: "Our spa packages are clearer and clients love how easy it is to schedule online.",
+  },
+];
+
+const fallbackPortfolio = [
+  {
+    id: "fallback-p1",
+    title: "Vilnius Lash & Brow Studio",
+    type: "Lash & Brow Studio",
+    description:
+      "Clean, mobile-first site with service list, gallery, and clear book-now buttons tied to the studio’s booking system.",
+    demoUrl: "#",
+  },
+  {
+    id: "fallback-p2",
+    title: "Old Town Spa & Wellness",
+    type: "Day Spa",
+    description: "Calming site with spa packages, treatments overview, gift vouchers, and directions for visitors.",
+    demoUrl: "#",
+  },
+  {
+    id: "fallback-p3",
+    title: "Naujamiestis Hair & Nail Studio",
+    type: "Hair & Nail Salon",
+    description: "Modern site combining hair and nail services, price list, team section, and social media integration.",
+    demoUrl: "#",
   },
 ];
 
@@ -76,8 +110,11 @@ export default async function HomePage() {
   const year = new Date().getFullYear();
 
   const siteConfig = (await prisma.siteConfig.findFirst()) ?? null;
-  const services = await prisma.service.findMany({ orderBy: { createdAt: "asc" } });
   const portfolioItems = await prisma.portfolioItem.findMany({ orderBy: { createdAt: "desc" } });
+
+  const portfolioList = portfolioItems.length ? portfolioItems : fallbackPortfolio;
+  const email = siteConfig?.email ?? "hello@anamsoft.com";
+  const whatsapp = siteConfig?.whatsapp ?? "+37061104553";
 
   return (
     <main className="min-h-screen bg-blush-50">
@@ -87,7 +124,7 @@ export default async function HomePage() {
       <LocalBusinessSchema
         name="Anam Soft"
         url="https://anamsoft.com"
-        telephone="+370 611 04553"
+        telephone={siteConfig?.whatsapp ?? "+370 611 04553"}
         email={siteConfig?.email ?? "hello@anamsoft.com"}
         address={{
           streetAddress: "Vilnius",
@@ -96,355 +133,245 @@ export default async function HomePage() {
           postalCode: "LT-00000",
           addressCountry: "LT",
         }}
-        sameAs={[]}
       />
 
       {/* Hero */}
-      <section id="home" className="section-shell flex flex-col gap-12 py-16 md:py-20 lg:py-24 scroll-mt-20">
-        <div className="grid gap-12 lg:grid-cols-[1.05fr,0.95fr] items-center">
-          <div className="space-y-7">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-xs font-semibold text-blush-700 shadow-sm ring-1 ring-white/80">
-              Beauty, hair, nails, spa — Vilnius
-            </div>
-            <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold leading-tight text-slate-900 drop-shadow-sm">
-              {siteConfig?.heroTitle ?? "Websites for beauty salons & spas in Vilnius"}
+      <section
+        id="home"
+        className="relative overflow-hidden border-b border-white/60 bg-gradient-to-br from-white via-blush-50 to-blush-100"
+      >
+        <div className="section-shell max-w-6xl py-20 lg:py-28 grid gap-12 lg:grid-cols-2 items-center fade-up">
+          <div className="space-y-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-tight text-slate-900">
+              Websites that make your salon look fully booked
             </h1>
             <p className="text-lg text-slate-700 leading-relaxed max-w-2xl">
               {siteConfig?.heroSubtitle ??
-                "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients."}
+                "Anam Soft builds modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients."}
             </p>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-              <Button size="lg" className="shadow-soft hover:shadow-lg hover:-translate-y-[1px]" asChild>
-                <a href="#contact">Get a free website audit</a>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button size="lg" className="shadow-soft hover:shadow-lg" asChild>
+                <a href="#estimate">Get a project estimate</a>
               </Button>
               <Button variant="outline" size="lg" className="hover:-translate-y-[1px]" asChild>
-                <a href="#services">See packages</a>
+                <a href="#consultation">Book a free consultation</a>
               </Button>
             </div>
-            <span className="text-sm text-slate-600">
-              Or message me on WhatsApp:{" "}
-              <span className="font-semibold text-blush-700">{siteConfig?.whatsapp ?? "+370 611 04553"}</span>
-            </span>
-            <div className="flex flex-wrap gap-3 text-sm text-slate-600">
-              <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-blush-500" /> Mobile-first builds
-              </div>
-              <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-blush-500" /> Booking-focused copy
-              </div>
-              <div className="flex items-center gap-2 rounded-full bg-white/70 px-3 py-2 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-blush-500" /> Local SEO-ready
-              </div>
-            </div>
+            <p className="text-sm text-slate-600 inline-flex items-center gap-1">
+              Or message me on WhatsApp:
+              <a
+                className="inline-flex items-center gap-1 font-semibold text-blush-700 underline underline-offset-2"
+                href={`https://wa.me/${(siteConfig?.whatsapp ?? "+370 611 04553").replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <svg
+                  aria-label="WhatsApp"
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 32 32"
+                  className="h-4 w-4 fill-current"
+                >
+                  <path d="M16 3C9.372 3 4 8.373 4 15.003c0 2.565.77 4.956 2.09 6.95L4 29l7.224-2.04A11.91 11.91 0 0 0 16 27c6.628 0 12-5.373 12-11.997C28 8.373 22.628 3 16 3Zm0 22.195c-1.85 0-3.584-.506-5.07-1.383l-.363-.216-4.287 1.21 1.198-4.183-.236-.383A8.78 8.78 0 0 1 7.805 8.83 8.713 8.713 0 0 1 16 7.195c4.792 0 8.688 3.884 8.688 8.64 0 4.755-3.896 8.66-8.688 8.66Zm4.934-6.482c-.268-.134-1.587-.782-1.834-.87-.247-.089-.427-.134-.606.134-.178.268-.695.87-.852 1.05-.156.178-.313.202-.58.067-.268-.134-1.132-.416-2.157-1.327-.798-.71-1.336-1.587-1.494-1.855-.156-.268-.017-.413.118-.547.122-.121.268-.313.402-.47.134-.156.178-.268.268-.446.089-.178.045-.335-.022-.47-.067-.134-.606-1.465-.83-2.01-.218-.524-.441-.453-.606-.46h-.52c-.178 0-.47.067-.717.335-.247.268-.94.922-.94 2.247 0 1.324.961 2.604 1.095 2.784.134.178 1.891 2.887 4.587 4.044 2.698 1.157 2.698.77 3.184.722.487-.045 1.585-.645 1.81-1.268.223-.623.223-1.157.156-1.268-.067-.112-.245-.178-.513-.313Z" />
+                </svg>
+                {siteConfig?.whatsapp ?? "+370 611 04553"}
+              </a>
+            </p>
           </div>
-          <div className="relative">
-            <div className="absolute -left-10 -top-10 h-32 w-32 rounded-full bg-blush-400/25 blur-3xl" aria-hidden />
-            <div className="card-surface p-6 sm:p-8 relative overflow-hidden bg-gradient-to-br from-white via-blush-50 to-white">
-              <div className="absolute right-6 top-6 h-16 w-16 rounded-full bg-blush-100/80 blur-md" aria-hidden />
-              <div className="absolute -bottom-6 -left-10 h-32 w-32 rounded-full bg-blush-200/50 blur-2xl" aria-hidden />
-              <div className="space-y-5 relative">
-                <p className="text-sm uppercase tracking-[0.2em] text-blush-700 font-semibold">
-                  What you get
-                </p>
-                <ul className="space-y-4 text-sm text-slate-700">
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 inline-block h-2 w-2 rounded-full bg-blush-500" />
-                    Polished visuals tailored to your brand and services.
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 inline-block h-2 w-2 rounded-full bg-blush-500" />
-                    Fast-loading pages that feel great on mobile.
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 inline-block h-2 w-2 rounded-full bg-blush-500" />
-                    Clear calls-to-action so clients book right away.
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <span className="mt-1 inline-block h-2 w-2 rounded-full bg-blush-500" />
-                    Launch support plus analytics to track bookings.
-                  </li>
-                </ul>
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="rounded-xl bg-white/60 p-4 border border-white/80 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Focus</p>
-                    <p className="mt-1 font-semibold text-slate-900">Bookings first</p>
-                  </div>
-                  <div className="rounded-xl bg-white/60 p-4 border border-white/80 shadow-sm">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Style</p>
-                    <p className="mt-1 font-semibold text-slate-900">Soft & elegant</p>
+
+          <div className="relative float-soft">
+            <div className="absolute -left-12 -top-10 h-40 w-40 rounded-full bg-blush-300/30 blur-3xl" aria-hidden />
+            <Card className="relative overflow-hidden bg-white/80 backdrop-blur shadow-soft border border-white/60">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Salon website preview</CardTitle>
+                  <Badge className="bg-blush-100 text-blush-700">Bookings +24%</Badge>
+                </div>
+                <CardDescription>Lash & Brow Studio</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-10 w-32 rounded-full bg-blush-100" />
+                <div className="space-y-2">
+                  <div className="h-3 w-3/4 rounded-full bg-slate-100" />
+                  <div className="h-3 w-2/3 rounded-full bg-slate-100" />
+                </div>
+                <div className="rounded-2xl bg-gradient-to-br from-blush-50 via-white to-blush-100 p-4 space-y-3">
+                  <div className="h-28 rounded-xl bg-white/80" />
+                  <div className="flex gap-2">
+                    <div className="h-2 w-1/3 rounded-full bg-slate-100" />
+                    <div className="h-2 w-1/5 rounded-full bg-slate-100" />
                   </div>
                 </div>
-              </div>
-            </div>
+                <div className="flex gap-3">
+                  <div className="h-12 flex-1 rounded-xl bg-slate-100" />
+                  <div className="h-12 flex-1 rounded-xl bg-slate-100" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Who I work with */}
-      <section id="who" className="section-shell py-14 md:py-20 scroll-mt-20">
-        <div className="card-surface p-8 sm:p-10 hover:shadow-xl">
-          <div className="space-y-4 max-w-4xl">
-            <span className="text-sm font-semibold text-blush-700">Who I work with</span>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">
-              Websites for beauty & wellness businesses
-            </h2>
+      {/* Trusted by */}
+      <section className="border-b border-white/60 bg-white/80 fade-up">
+        <div className="section-shell max-w-6xl py-6 flex flex-wrap items-center gap-4 text-sm font-medium text-slate-600">
+          <span className="text-slate-700">Trusted by beauty & wellness businesses in Vilnius</span>
+          <div className="flex flex-wrap gap-3 text-slate-500">
+            <span className="rounded-full bg-slate-100 px-3 py-1">Vilnius Lash Studio</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">Old Town Spa</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">Naujamiestis Hair & Nails</span>
+            <span className="rounded-full bg-slate-100 px-3 py-1">Amber Wellness</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Who I work with & Benefits */}
+      <section id="services" className="section-shell max-w-6xl py-16 md:py-20 space-y-10 fade-up">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr,0.9fr] items-start">
+          <div className="space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Websites for beauty & wellness businesses</h2>
             <p className="text-slate-700 leading-relaxed">
-              Anam Soft specialises in websites for beauty & hair salons, nail & lash studios, and day spas or wellness centres in Vilnius. Your clients often find you through Google, Instagram, and booking platforms—your website should support each of these channels with clear offers and easy booking paths.
+              I focus on beauty & hair salons, nail & lash studios, and day spas or wellness centres. Your clients find you through Google, Instagram, and booking platforms like Fresha or Treatwell—your website should support each of these with clear offers and easy booking paths.
             </p>
-            <div className="grid gap-3 sm:grid-cols-3 text-sm text-slate-700">
-              <div className="rounded-xl border border-blush-100 bg-white/70 p-4 shadow-sm">
-                Beauty & hair salons
-              </div>
-              <div className="rounded-xl border border-blush-100 bg-white/70 p-4 shadow-sm">
-                Nail & lash studios
-              </div>
-              <div className="rounded-xl border border-blush-100 bg-white/70 p-4 shadow-sm">
-                Day spas & wellness centres
-              </div>
-            </div>
+            <ul className="text-sm text-slate-700 space-y-2">
+              <li>• Beauty & hair salons</li>
+              <li>• Nail & lash studios</li>
+              <li>• Day spas & wellness centres</li>
+              <li>• Google, Instagram, Fresha/Treatwell friendly</li>
+            </ul>
           </div>
-        </div>
-      </section>
-
-      {/* Services */}
-      <section id="services" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="flex flex-col gap-3 mb-10">
-          <span className="text-sm font-semibold text-blush-700">Services</span>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Choose the right website package</h2>
-          <p className="text-slate-600 max-w-2xl">
-            Whether you are opening your first studio or refreshing an established spa, I match the build to your goals and timeline.
-          </p>
-        </div>
-        {services.length === 0 ? (
-          <p className="text-sm text-slate-600">No services configured yet.</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {services.map((service) => (
-              <Card key={service.id} className="flex flex-col hover:-translate-y-1 hover:shadow-xl">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                title: "More online bookings",
+                desc: "Clear CTAs, booking links, and forms tailored to your services.",
+              },
+              {
+                title: "Professional first impression",
+                desc: "Clean, modern layouts that match your brand visuals.",
+              },
+              {
+                title: "Mobile-first for Instagram",
+                desc: "Optimised for phones so IG visitors can book instantly.",
+              },
+            ].map((item) => (
+              <Card key={item.title} className="h-full bg-white/80">
                 <CardHeader>
-                  <CardTitle>{service.name}</CardTitle>
-                  <CardDescription>{service.description}</CardDescription>
+                  <CardTitle className="text-lg">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between text-sm text-slate-700">
-                    <span className="font-semibold text-blush-700">
-                      {service.priceFrom ? `from €${service.priceFrom}` : "Price on request"}
-                    </span>
-                    {service.isFeatured && (
-                      <span className="rounded-full bg-blush-100 px-3 py-1 text-xs font-semibold text-blush-700">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-auto flex items-center justify-between pt-4">
-                    <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
-                      <a href="#contact">Contact about this package</a>
-                    </Button>
-                  </div>
-                </CardContent>
+                <CardContent className="text-sm text-slate-600">{item.desc}</CardContent>
               </Card>
             ))}
           </div>
-        )}
+        </div>
       </section>
 
+      <PricingSection />
+
+      <ProjectEstimatorWizard />
+
+      <ConsultationBookingSection />
+
       {/* Process */}
-      <section id="process" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="flex flex-col gap-3 mb-10">
-          <span className="text-sm font-semibold text-blush-700">Process</span>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">A clear path from idea to launch</h2>
-          <p className="text-slate-600 max-w-2xl">
-            I keep projects simple: short feedback loops, transparent timelines, and sites that are ready to convert on day one.
-          </p>
+      <section id="process" className="section-shell max-w-5xl py-16 md:py-20 space-y-6 fade-up">
+        <div className="space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">A simple 4-step process</h2>
+          <p className="text-slate-600">Clear steps from first call to launch and ongoing support.</p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="space-y-4">
           {steps.map((step, index) => (
-            <div
-              key={step.title}
-              className="card-surface relative overflow-hidden bg-gradient-to-b from-white to-blush-50/60 p-6 flex flex-col gap-4 hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="absolute -left-6 -top-6 h-20 w-20 rounded-full bg-blush-100/70" aria-hidden />
-              <div className="absolute -right-8 -top-10 h-24 w-24 rounded-full bg-blush-100/50" aria-hidden />
-              <div className="flex items-start justify-between relative">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 px-3 py-1 text-xs font-semibold text-blush-700 shadow-sm">
-                  <span>Step</span>
-                  <span className="text-sm">{index + 1}</span>
-                </div>
-                <div className="h-9 w-9 rounded-full bg-white/80 border border-blush-100 flex items-center justify-center text-blush-600 shadow-sm">
-                  <step.icon className="h-4 w-4" aria-hidden />
-                </div>
+            <div key={step.title} className="relative flex gap-4">
+              <div className="flex flex-col items-center">
+                <Badge className="bg-blush-100 text-blush-700">Step {index + 1}</Badge>
+                {index < steps.length - 1 && <div className="h-full w-px bg-slate-200 flex-1" />}
               </div>
-              <div className="space-y-2 relative">
-                <h3 className="text-lg font-semibold text-slate-900">{step.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{step.desc}</p>
-              </div>
+              <Card className="flex-1">
+                <CardHeader className="flex flex-row items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blush-100 text-blush-700 flex items-center justify-center">
+                    <step.icon className="h-5 w-5" aria-hidden />
+                  </div>
+                  <CardTitle className="text-lg">{step.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-slate-600">{step.desc}</CardContent>
+              </Card>
             </div>
           ))}
         </div>
       </section>
 
       {/* Portfolio */}
-      <section id="portfolio" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="flex flex-col gap-3 mb-10">
-          <span className="text-sm font-semibold text-blush-700">Portfolio</span>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Recent beauty & wellness builds</h2>
-          <p className="text-slate-600 max-w-2xl">
-            Example site experiences crafted for Vilnius-based salons and spas.
-          </p>
+      <section id="portfolio" className="section-shell max-w-6xl py-16 md:py-20 space-y-6 fade-up">
+        <div className="space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Example salon & spa projects</h2>
+          <p className="text-slate-600">Selected work for Vilnius-based beauty and wellness teams.</p>
         </div>
-        {portfolioItems.length === 0 ? (
-          <p className="text-sm text-slate-600">No portfolio items yet.</p>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {portfolioItems.map((project, idx) => (
-              <Card
-                key={project.id}
-                className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
-                <div className="relative p-6 space-y-4">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
-                    Case {idx + 1}
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-xl font-semibold text-slate-900">{project.title}</h3>
-                    <p className="text-sm font-medium text-blush-700">{project.type}</p>
-                  </div>
-                  <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
-                  {project.demoUrl ? (
-                    <div className="mt-2">
-                      <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
-                        <a href={project.demoUrl} target="_blank" rel="noreferrer">
-                          View project
-                        </a>
-                      </Button>
-                    </div>
-                  ) : null}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {portfolioList.map((project, idx) => (
+            <Card
+              key={project.id}
+              className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
+              <div className="relative p-5 space-y-3">
+                <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
+                  Case {idx + 1}
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Testimonials */}
-      <section id="testimonials" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="flex flex-col gap-3 mb-10">
-          <span className="text-sm font-semibold text-blush-700">Testimonials</span>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">What clients say</h2>
-          <p className="text-slate-600 max-w-2xl">
-            Short notes from salon owners who partnered with Anam Soft.
-          </p>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          {testimonials.map((item) => (
-            <Card key={item.name} className="h-full hover:-translate-y-1 hover:shadow-xl">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-                <CardDescription className="text-sm">{item.role}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-700 leading-relaxed">“{item.quote}”</p>
-              </CardContent>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-semibold text-slate-900">{project.title}</h3>
+                  <p className="text-sm font-medium text-blush-700">{project.type}</p>
+                </div>
+                <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
+                <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-blush-50 via-white to-blush-100 border border-blush-100" />
+                {project.demoUrl ? (
+                  <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
+                    <a href={project.demoUrl} target="_blank" rel="noreferrer">
+                      View project
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
             </Card>
           ))}
         </div>
       </section>
 
-      {/* About */}
-      <section id="about" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="card-surface overflow-hidden hover:shadow-xl hover:-translate-y-1">
-          <div className="grid gap-6 md:grid-cols-[1fr,1.2fr] items-center">
-            <div className="bg-gradient-to-br from-blush-100 via-white to-blush-50 h-full w-full p-10 flex flex-col justify-center">
-              <h3 className="text-2xl font-semibold text-slate-900">About Anam Soft</h3>
-              <p className="mt-4 text-slate-700 leading-relaxed">
-                I am Rafi, founder and web developer based in Vilnius, specialising in beauty & wellness businesses. I combine thoughtful UX, booking-focused copy, and fast tech to help salons turn visitors into loyal clients.
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3 text-sm text-slate-700">
-                <span className="rounded-full bg-white px-4 py-2 shadow-sm">Local SEO</span>
-                <span className="rounded-full bg-white px-4 py-2 shadow-sm">Fast mobile builds</span>
-                <span className="rounded-full bg-white px-4 py-2 shadow-sm">Brand-consistent visuals</span>
-              </div>
-            </div>
-            <div className="p-8 space-y-6">
-              <h4 className="text-lg font-semibold text-slate-900">Why studios work with me</h4>
-              <ul className="space-y-4 text-slate-700 text-sm leading-relaxed">
-                <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blush-500" />
-                  Websites tailored to how your clients actually book appointments.
-                </li>
-                <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blush-500" />
-                  Collaborative process with quick prototypes and clear handoff.
-                </li>
-                <li className="flex gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blush-500" />
-                  Ongoing support for updates, seasonal offers, and campaigns.
-                </li>
-              </ul>
-              <Button variant="outline" className="mt-4" asChild>
-                <a href="#contact">Plan your site</a>
-              </Button>
-            </div>
-          </div>
+      {/* Testimonials */}
+      <section className="section-shell max-w-5xl py-16 md:py-20 space-y-6 fade-up">
+        <div className="space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">What clients say</h2>
+          <p className="text-slate-600">A few words from beauty and wellness teams.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {testimonials.map((item) => (
+            <Card key={item.name} className="h-full">
+              <CardHeader>
+                <CardTitle className="text-lg">{item.name}</CardTitle>
+                <CardDescription>{item.salon}</CardDescription>
+              </CardHeader>
+              <CardContent className="text-sm text-slate-700 leading-relaxed">“{item.quote}”</CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="flex flex-col gap-3 mb-10">
-          <span className="text-sm font-semibold text-blush-700">FAQ</span>
-          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Common questions</h2>
-          <p className="text-slate-600 max-w-2xl">Straight answers about timelines, how we work, and updates.</p>
+      <section id="faq" className="section-shell max-w-5xl py-16 md:py-20 space-y-6 fade-up">
+        <div className="space-y-3">
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Frequently asked questions</h2>
+          <p className="text-slate-600">Straight answers about timelines, how we work, and updates.</p>
         </div>
         <Accordion items={faqs} defaultOpenId="timeline" />
       </section>
 
-      {/* Contact */}
-      <section id="contact" className="section-shell py-16 md:py-20 scroll-mt-20">
-        <div className="grid gap-8 lg:grid-cols-[0.9fr,1.1fr] items-start">
-          <div className="space-y-5">
-            <span className="text-sm font-semibold text-blush-700">Contact</span>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Let’s talk about your salon website</h2>
-            <p className="text-slate-600">
-              Tell me about your salon, services, and what you want to improve. I’ll send a quick plan to increase bookings.
-            </p>
-            <div className="space-y-3 text-sm text-slate-700">
-              <div>
-                <span className="font-semibold">Email:</span>{" "}
-                <a className="hover:text-blush-700" href={`mailto:${siteConfig?.email ?? "hello@anamsoft.com"}`}>
-                  {siteConfig?.email ?? "hello@anamsoft.com"}
-                </a>
-              </div>
-              <div>
-                <span className="font-semibold">WhatsApp / phone:</span>{" "}
-                <a
-                  className="hover:text-blush-700"
-                  href={`https://wa.me/${(siteConfig?.whatsapp ?? "+370 611 04553").replace(/\\D/g, "")}`}
-                >
-                  {siteConfig?.whatsapp ?? "+370 611 04553"}
-                </a>
-              </div>
-              <div>
-                <span className="font-semibold">Location:</span> Vilnius, Lithuania (working with clients online)
-              </div>
-            </div>
-          </div>
-
-          <div className="card-surface p-6 sm:p-8 hover:shadow-xl">
-            <ContactForm />
-          </div>
-        </div>
-      </section>
+      <ContactSection email={email} whatsapp={whatsapp} />
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white/80">
-        <div className="section-shell py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
-          <span>© {year} Anam Soft</span>
+        <div className="section-shell max-w-6xl py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-600">
+          <span>© {year} AnamSoft</span>
           <div className="flex gap-4">
-            <a href="#services" className="hover:text-blush-700">Services</a>
-            <a href="#portfolio" className="hover:text-blush-700">Portfolio</a>
             <a href="#contact" className="hover:text-blush-700">Contact</a>
+            <a href="/privacy" className="hover:text-blush-700">Privacy</a>
+            <a href="/about" className="hover:text-blush-700">About</a>
           </div>
         </div>
       </footer>

@@ -1,16 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Menu, User, LogOut, LogIn, UserPlus, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, User, LogOut, LogIn, UserPlus, X, Folder } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import type { Route } from "next";
 
-const links = ["home", "services", "process", "portfolio", "about", "faq", "contact"];
+const anchorSections = ["home", "process", "portfolio", "faq", "contact", "about"];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [activeId, setActiveId] = useState<string>("home");
   const [open, setOpen] = useState(false);
   const { data: session, status } = useSession();
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -31,7 +35,7 @@ export function Navbar() {
       { rootMargin: "-40% 0px -40% 0px", threshold: 0.1 }
     );
 
-    links.forEach((id) => {
+    anchorSections.forEach((id) => {
       const el = document.getElementById(id);
       if (el) observer.observe(el);
     });
@@ -39,26 +43,35 @@ export function Navbar() {
     return () => observer.disconnect();
   }, []);
 
-  const linkItems = useMemo(
-    () =>
-      links.map((link) => {
-        const label = link.charAt(0).toUpperCase() + link.slice(1);
-        const isActive = activeId === link;
+  const linkItems = useMemo(() => {
+    const navLinks = [
+      { href: "/", label: "Home", type: "route" as const },
+      { href: "/services", label: "Services", type: "route" as const },
+      { href: "/pricing", label: "Pricing", type: "route" as const },
+      { href: "/process", label: "Process", type: "route" as const },
+      { href: "/about", label: "About", type: "route" as const },
+      { href: "/contact", label: "Contact", type: "route" as const },
+    ];
+
+    return navLinks.map((link) => {
+      const isActiveRoute = pathname === link.href;
+      if (link.type === "route") {
         return (
-          <a
-            key={link}
-            href={`#${link}`}
+          <Link
+            key={link.href}
+            href={link.href as Route}
             className={`text-sm font-medium transition-colors ${
-              isActive ? "text-blush-700" : "text-slate-700 hover:text-blush-700"
+              isActiveRoute ? "text-blush-700" : "text-slate-700 hover:text-blush-700"
             } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2`}
             onClick={() => setOpen(false)}
           >
-            {label}
-          </a>
+            {link.label}
+          </Link>
         );
-      }),
-    [activeId]
-  );
+      }
+      return null;
+    });
+  }, [pathname]);
 
   return (
     <header
@@ -80,6 +93,14 @@ export function Navbar() {
                   className="text-sm font-semibold text-blush-700 hover:text-blush-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2"
                 >
                   Admin
+                </a>
+              )}
+              {(session?.user as any)?.role === "CLIENT" && (
+                <a
+                  href="/portal/projects"
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-sm font-semibold text-slate-700 hover:text-blush-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2"
+                >
+                  <Folder className="h-4 w-4" aria-hidden /> Portal
                 </a>
               )}
               <button
@@ -123,6 +144,13 @@ export function Navbar() {
         >
           <div className="section-shell py-4 flex flex-col gap-3">
             {linkItems}
+            <a
+              href="/about"
+              className="text-sm font-medium text-slate-700 hover:text-blush-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2"
+              onClick={() => setOpen(false)}
+            >
+              About
+            </a>
             <div className="flex flex-col gap-2 pt-2">
               {status === "authenticated" ? (
                 <>
@@ -139,6 +167,15 @@ export function Navbar() {
                       onClick={() => setOpen(false)}
                     >
                       Admin
+                    </a>
+                  )}
+                  {(session?.user as any)?.role === "CLIENT" && (
+                    <a
+                      href="/portal/projects"
+                      className="text-sm font-semibold text-blush-700 hover:text-blush-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2"
+                      onClick={() => setOpen(false)}
+                    >
+                      My projects
                     </a>
                   )}
                   <button

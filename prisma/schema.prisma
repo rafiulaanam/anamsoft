@@ -10,6 +10,37 @@ datasource db {
 enum Role {
   ADMIN
   USER
+  CLIENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  CALL_BOOKED
+  PROPOSAL_SENT
+  WON
+  LOST
+}
+
+enum LeadSource {
+  CONTACT
+  ESTIMATE
+  AUDIT
+}
+
+enum ProjectStatus {
+  PLANNING
+  DESIGN
+  DEVELOPMENT
+  REVIEW
+  LAUNCHED
+  PAUSED
+}
+
+enum ProjectSourceType {
+  MANUAL
+  ESTIMATE
+  AUDIT
 }
 
 model User {
@@ -22,6 +53,7 @@ model User {
   role           Role      @default(USER)
   accounts       Account[]
   sessions       Session[]
+  projects       Project[] @relation("UserProjects")
 }
 
 model Account {
@@ -62,6 +94,14 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model PasswordResetToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+}
+
 model Service {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   name        String
@@ -87,13 +127,21 @@ model PortfolioItem {
 }
 
 model Lead {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  name       String
-  salonName  String
-  website    String?
-  message    String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  salonName String
+  email     String
+  website   String?
+  message   String
+  status    LeadStatus @default(NEW)
+  isRead    Boolean    @default(false)
+  notes     String?
+  source    LeadSource @default(CONTACT)
+  budgetRange String?
+  reason      String?
+  howHeard    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime?  @updatedAt
 }
 
 model SiteConfig {
@@ -104,4 +152,93 @@ model SiteConfig {
   email        String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // Advanced settings
+  sendAdminLeadEmails   Boolean  @default(true)
+  sendClientLeadEmails  Boolean  @default(true)
+  dailyLeadSummaryEmail Boolean  @default(false)
+
+  autoFollowupEnabled Boolean @default(false)
+  autoFollowupDays    Int     @default(3)
+  markStaleAfterDays  Int     @default(14)
+
+  defaultLocale        String  @default("en")
+  secondaryLocale      String?
+  showLanguageSwitcher Boolean @default(true)
+
+  aiFeaturesEnabled    Boolean @default(false)
+  aiDraftReplyEnabled  Boolean @default(false)
+  sendDailySummaryEmails Boolean @default(false)
+}
+
+model ProjectEstimate {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String
+  salonName    String?
+  websiteUrl   String?
+  businessType String
+  pagesNeeded  String
+  bookingSetup String
+  budgetRange  String
+  timeline     String
+  goals        String?
+  notes        String?
+  status       LeadStatus @default(NEW)
+  createdAt    DateTime @default(now())
+}
+
+model WebsiteAudit {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  email        String
+  websiteUrl   String
+  businessType String?
+  mainGoal     String
+  message      String?
+  status       LeadStatus @default(NEW)
+  notes        String?
+  createdAt    DateTime @default(now())
+}
+
+model Project {
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String            @unique
+  summary     String?
+  type        String?
+  status      ProjectStatus     @default(PLANNING)
+  clientId    String            @db.ObjectId
+  client      User              @relation("UserProjects", fields: [clientId], references: [id])
+  sourceType  ProjectSourceType @default(MANUAL)
+  sourceId    String?
+  startDate   DateTime?
+  dueDate     DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  tasks       ProjectTask[]
+  updates     ProjectUpdate[]
+}
+
+model ProjectTask {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id])
+  title               String
+  description         String?
+  isRequired          Boolean  @default(true)
+  isCompletedByClient Boolean  @default(false)
+  order               Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ProjectUpdate {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  title     String
+  message   String?
+  createdBy String?
+  createdAt DateTime @default(now())
 }

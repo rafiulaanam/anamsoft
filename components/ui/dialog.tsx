@@ -39,3 +39,7 @@ export function DialogDescription({ className, ...props }: React.HTMLAttributes<
 export function DialogContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("px-6 pb-6", className)} {...props} />;
 }
+
+export function DialogFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("flex items-center justify-end gap-2 px-6 pb-6", className)} {...props} />;
+}

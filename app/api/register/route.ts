@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcrypt";
+import crypto from "crypto";
+import { sendEmailVerificationEmail } from "@/lib/email";
 
 function validateEmail(email: string) {
   return /\S+@\S+\.\S+/.test(email);
@@ -26,16 +28,33 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await hash(password, 10);
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name: name || null,
         email,
         hashedPassword,
         role: "USER",
+        emailVerified: null,
       },
     });
 
-    return NextResponse.json({ success: true });
+    const token = crypto.randomUUID();
+    const expires = new Date(Date.now() + 1000 * 60 * 60);
+
+    await prisma.verificationToken.create({
+      data: {
+        identifier: user.email,
+        token,
+        expires,
+      },
+    });
+
+    await sendEmailVerificationEmail(user, token);
+
+    return NextResponse.json({
+      success: true,
+      message: "Account created. Please check your email to verify your address before signing in.",
+    });
   } catch (error) {
     console.error("Register error", error);
     return NextResponse.json({ error: "Failed to register" }, { status: 500 });

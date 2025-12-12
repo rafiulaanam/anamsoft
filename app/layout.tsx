@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
+import { ToastProvider } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
-
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Anam Soft – Websites for beauty salons & spas in Vilnius",
@@ -42,8 +37,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={plusJakarta.className}>
-        <AuthSessionProvider>{children}</AuthSessionProvider>
+      <body className="font-sans">
+        <ToastProvider>
+          <AuthSessionProvider>
+            {children}
+          </AuthSessionProvider>
+          <Toaster />
+        </ToastProvider>
       </body>
     </html>
   );
