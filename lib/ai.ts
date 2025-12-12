@@ -1,11 +1,9 @@
 // Lazy-load OpenAI to avoid build-time failures when the package or API key is missing.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let openai: any = null;
 function getOpenAI() {
   if (openai) return openai;
   if (!process.env.OPENAI_API_KEY) return null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const OpenAI = require("openai").default || require("openai");
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     return openai;
