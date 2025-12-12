@@ -63,10 +63,7 @@ export default async function AdminAuditsPage() {
                     {audit.websiteUrl}
                   </a>
                 </td>
-                <td className="py-2 pr-3 text-xs text-muted-foreground">
-                  {audit.mainProblems.slice(0, 2).join(", ")}
-                  {audit.mainProblems.length > 2 && ` +${audit.mainProblems.length - 2} more`}
-                </td>
+                <td className="py-2 pr-3 text-xs text-muted-foreground">{audit.mainGoal || "Not specified"}</td>
                 <td className="py-2 pr-3">
                   <Badge variant="outline">{audit.status || "NEW"}</Badge>
                 </td>

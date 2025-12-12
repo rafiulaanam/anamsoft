@@ -38,17 +38,19 @@ export async function POST(req: NextRequest) {
       notes: notes?.trim() || undefined,
     };
 
+    const mainGoalText =
+      mainProblems && Array.isArray(mainProblems) && mainProblems.length > 0 ? mainProblems.join(", ") : "Not specified";
+
     await prisma.websiteAudit.create({
       data: {
         name: payload.name,
         email: payload.email,
-        businessName: payload.businessName,
         websiteUrl: payload.websiteUrl,
         businessType: payload.businessType,
-        mainProblems: payload.mainProblems,
+        mainGoal: mainGoalText,
+        message: payload.notes,
         notes: payload.notes,
         status: "NEW",
-        source: "AUDIT",
       },
     });
 

@@ -5,24 +5,12 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 
 export const metadata: Metadata = {
   title: "Website audit | Admin | AnamSoft",
 };
 
 export const dynamic = "force-dynamic";
-
-const statuses = ["NEW", "IN_PROGRESS", "DONE"];
-
-async function updateStatus(id: string, status: string) {
-  "use server";
-  await prisma.websiteAudit.update({
-    where: { id },
-    data: { status },
-  });
-}
 
 export default async function AdminAuditDetailPage({ params }: { params: { id: string } }) {
   const audit = await prisma.websiteAudit.findUnique({
@@ -77,38 +65,21 @@ export default async function AdminAuditDetailPage({ params }: { params: { id: s
 
         <div className="rounded-2xl border bg-card p-4 space-y-3">
           <div>
-            <p className="text-sm text-muted-foreground">Main problems</p>
-            <ul className="list-disc list-inside text-sm">
-              {audit.mainProblems.map((p, idx) => (
-                <li key={idx}>{p}</li>
-              ))}
-            </ul>
+            <p className="text-sm text-muted-foreground">Main goal / problems</p>
+            <p className="text-sm text-slate-800 whitespace-pre-line">{(audit as any).mainGoal || "Not specified"}</p>
           </div>
-          {audit.notes && (
+          {audit.message && (
             <div>
-              <p className="text-sm text-muted-foreground">Notes</p>
-              <p className="text-sm text-slate-800 whitespace-pre-line">{audit.notes}</p>
+              <p className="text-sm text-muted-foreground">Message</p>
+              <p className="text-sm text-slate-800 whitespace-pre-line">{audit.message}</p>
             </div>
           )}
 
-          <form action={updateStatus.bind(null, audit.id)} className="space-y-2 pt-2">
+          <div className="space-y-2 pt-2">
             <Label className="text-sm font-medium">Status</Label>
-            <Select name="status" defaultValue={audit.status || "NEW"}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statuses.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="submit" size="sm">
-              Update status
-            </Button>
-          </form>
+            <Badge variant="outline">{audit.status || "NEW"}</Badge>
+            <p className="text-xs text-muted-foreground">Status updates are currently read-only.</p>
+          </div>
 
           <div className="flex gap-2">
             <Button variant="outline" asChild>
@@ -117,7 +88,7 @@ export default async function AdminAuditDetailPage({ params }: { params: { id: s
               </Link>
             </Button>
             <Button variant="ghost" asChild>
-              <a href={`mailto:${audit.email}?subject=Website audit for ${audit.businessName ?? "your site"}`}>
+              <a href={`mailto:${audit.email}?subject=Website audit for ${audit.name}`}>
                 Reply by email
               </a>
             </Button>
