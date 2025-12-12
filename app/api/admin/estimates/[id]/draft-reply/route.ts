@@ -2,18 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { AIProjectEstimateInput, generateEstimateReplyWithAI } from "@/lib/ai";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ error: "OPENAI_API_KEY is not configured" }, { status: 500 });
-    }
-
     const estimate = await prisma.projectEstimate.findUnique({
       where: { id: params.id },
     });
 
     if (!estimate) {
       return NextResponse.json({ error: "Estimate not found" }, { status: 404 });
+    }
+
+    // If no API key is configured, return an empty draft so the UI still works.
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { subject: "Website estimate for your project", body: "" },
+        { status: 200 }
+      );
     }
 
     const aiInput: AIProjectEstimateInput = {
