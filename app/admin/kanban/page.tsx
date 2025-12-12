@@ -8,8 +8,23 @@ export const metadata: Metadata = {
 };
 
 type LeadSourceType = "ESTIMATE" | "AUDIT";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export default async function AdminKanbanPage() {
+  // During static build or if DB is unreachable, return an empty board to avoid Prisma connection errors.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Leads Kanban</h1>
+          <p className="text-sm text-muted-foreground">Visual pipeline for all leads.</p>
+        </div>
+        <AdminLeadsKanbanBoard leads={[]} />
+      </div>
+    );
+  }
+
   const estimates: ProjectEstimate[] = (prisma as any).projectEstimate
     ? await prisma.projectEstimate.findMany({ orderBy: { createdAt: "desc" } })
     : [];

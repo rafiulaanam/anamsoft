@@ -7,6 +7,11 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(_req: NextRequest, context: { params: { id: string } }) {
+  // During static build (or when Vercel is compiling), avoid DB/API work so Next can finish successfully.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+    return NextResponse.json({ subject: "Website estimate for your project", body: "" }, { status: 200 });
+  }
+
   try {
     const { id } = context.params;
 
