@@ -1,8 +1,19 @@
-import OpenAI from "openai";
-
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy-load OpenAI to avoid build-time failures when the package or API key is missing.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let openai: any = null;
+function getOpenAI() {
+  if (openai) return openai;
+  if (!process.env.OPENAI_API_KEY) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const OpenAI = require("openai").default || require("openai");
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    return openai;
+  } catch (err) {
+    console.error("OpenAI client not available:", err);
+    return null;
+  }
+}
 
 export interface AIProjectEstimateInput {
   name: string;
@@ -29,6 +40,10 @@ export interface ProjectDescriptionAIInput {
 export async function generateEstimateReplyWithAI(
   estimate: AIProjectEstimateInput
 ): Promise<{ subject: string; body: string }> {
+  const client = getOpenAI();
+  if (!client) {
+    return { subject: "Website estimate for your project", body: "" };
+  }
   const {
     name,
     businessName,
@@ -78,7 +93,7 @@ End with your name (Rafiul Anam) and THESE exact contact details (do not invent 
 - Website: https://anamsoft.com
 `;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await client.chat.completions.create({
     model: "gpt-4.1-mini",
     messages: [
       {
@@ -94,7 +109,7 @@ End with your name (Rafiul Anam) and THESE exact contact details (do not invent 
     temperature: 0.4,
   });
 
-  const fullText = completion.choices[0]?.message?.content ?? "";
+  const fullText = completion?.choices?.[0]?.message?.content ?? "";
 
   let subject = "Website estimate for your project";
   let body = fullText;
@@ -111,8 +126,9 @@ End with your name (Rafiul Anam) and THESE exact contact details (do not invent 
 export async function generateProjectDescriptionWithAI(
   input: ProjectDescriptionAIInput
 ): Promise<string> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set");
+  const client = getOpenAI();
+  if (!client) {
+    return "";
   }
 
   const {
@@ -150,7 +166,7 @@ Write 1–2 short paragraphs in clear English that:
 Do NOT add greetings or sign-offs. Just the description text.
 `;
 
-  const completion = await openai.chat.completions.create({
+  const completion = await client.chat.completions.create({
     model: "gpt-4.1-mini",
     messages: [
       {
@@ -163,6 +179,6 @@ Do NOT add greetings or sign-offs. Just the description text.
     temperature: 0.5,
   });
 
-  const text = completion.choices[0]?.message?.content ?? "";
+  const text = completion?.choices?.[0]?.message?.content ?? "";
   return text.trim();
 }
