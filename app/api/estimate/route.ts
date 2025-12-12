@@ -6,6 +6,9 @@ import {
   sendProjectEstimateToAdmin,
 } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 function calculateEstimate(pages: string[], features: string[], urgency?: string) {
   const base = 10;
   const score = base + pages.length * 2 + features.length * 3 + (urgency === "ASAP" ? 5 : 0);
@@ -16,6 +19,11 @@ function calculateEstimate(pages: string[], features: string[], urgency?: string
 }
 
 export async function POST(req: NextRequest) {
+  // Avoid DB/email work during static/Vercel build.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+    return NextResponse.json({ success: true });
+  }
+
   try {
     const body = await req.json();
     const {
