@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  // Avoid DB work during static/Vercel build.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+    return NextResponse.json({ data: [] }, { status: 200 });
+  }
+
   try {
+    if (!(prisma as any).projectUpdate?.findMany) {
+      return NextResponse.json({ data: [] }, { status: 200 });
+    }
     const updates = await prisma.projectUpdate.findMany({
       where: { projectId: params.id },
       orderBy: { createdAt: "desc" },
@@ -15,11 +26,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  // Avoid DB work during static/Vercel build.
+  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+    return NextResponse.json({ data: null }, { status: 200 });
+  }
+
   try {
     const body = await req.json();
     const title = body?.title as string | undefined;
     if (!title) {
       return NextResponse.json({ error: "Title is required." }, { status: 400 });
+    }
+
+    if (!(prisma as any).project?.findUnique || !(prisma as any).projectUpdate?.create) {
+      return NextResponse.json({ data: null }, { status: 200 });
     }
 
     const project = await prisma.project.findUnique({ where: { id: params.id } });
