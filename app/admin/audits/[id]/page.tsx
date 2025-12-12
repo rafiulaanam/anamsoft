@@ -43,12 +43,6 @@ export default async function AdminAuditDetailPage({ params }: { params: { id: s
               {audit.email}
             </a>
           </div>
-          {audit.businessName && (
-            <div>
-              <p className="text-sm text-muted-foreground">Business name</p>
-              <p className="font-medium text-slate-900">{audit.businessName}</p>
-            </div>
-          )}
           <div>
             <p className="text-sm text-muted-foreground">Website</p>
             <a className="text-primary underline" href={audit.websiteUrl} target="_blank" rel="noreferrer">
@@ -83,9 +77,9 @@ export default async function AdminAuditDetailPage({ params }: { params: { id: s
 
           <div className="flex gap-2">
             <Button variant="outline" asChild>
-              <Link href={audit.websiteUrl} target="_blank">
+              <a href={audit.websiteUrl} target="_blank" rel="noreferrer">
                 Open website
-              </Link>
+              </a>
             </Button>
             <Button variant="ghost" asChild>
               <a href={`mailto:${audit.email}?subject=Website audit for ${audit.name}`}>
