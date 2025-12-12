@@ -52,8 +52,8 @@ export function EstimateWizard() {
     }
   };
 
-  const nextStep = () => setStep((s) => Math.min(5, (s + 1) as Step));
-  const prevStep = () => setStep((s) => Math.max(1, (s - 1) as Step));
+  const nextStep = () => setStep((s) => (s === 5 ? 5 : ((s + 1) as Step)));
+  const prevStep = () => setStep((s) => (s === 1 ? 1 : ((s - 1) as Step)));
 
   const handleSubmit = async () => {
     setError(null);

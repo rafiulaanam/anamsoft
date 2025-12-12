@@ -39,7 +39,7 @@ export default function LoginPage() {
   // If already authenticated, redirect away from login
   useEffect(() => {
     if (status === "authenticated") {
-      const role = session?.user?.role;
+      const role = (session?.user as any)?.role;
       if (role === "ADMIN") {
         router.replace("/admin");
       } else {

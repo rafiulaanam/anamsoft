@@ -132,7 +132,10 @@ export default function AuditForm() {
         <div className="grid gap-2 sm:grid-cols-2">
           {PROBLEMS.map((problem) => (
             <label key={problem} className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-              <Checkbox checked={form.mainProblems.includes(problem)} onCheckedChange={() => toggleProblem(problem)} />
+              <Checkbox
+                checked={form.mainProblems.includes(problem)}
+                onChange={() => toggleProblem(problem)}
+              />
               <span>{problem}</span>
             </label>
           ))}

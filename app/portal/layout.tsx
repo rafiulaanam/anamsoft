@@ -25,7 +25,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
                 <form
                   action={async () => {
                     "use server";
-                    await signOut({ callbackUrl: "/login" });
+                    await signOut({ redirectTo: "/login" });
                   }}
                 >
                   <Button variant="outline" size="sm">

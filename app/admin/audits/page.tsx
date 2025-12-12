@@ -56,7 +56,7 @@ export default async function AdminAuditsPage() {
                 <td className="py-2 pr-3 whitespace-nowrap">{formatDate(audit.createdAt)}</td>
                 <td className="py-2 pr-3">
                   <div className="font-medium text-slate-900">{audit.name}</div>
-                  {audit.businessName && <div className="text-xs text-muted-foreground">{audit.businessName}</div>}
+                  {audit.businessType && <div className="text-xs text-muted-foreground">{audit.businessType}</div>}
                 </td>
                 <td className="py-2 pr-3">
                   <a href={audit.websiteUrl} target="_blank" rel="noreferrer" className="text-primary underline">

@@ -42,7 +42,7 @@ export default function VerifyEmailPage() {
         setStatus("success");
         setMessage("Your email has been verified. Redirecting...");
         const target = `/verify-email/success${email ? `?email=${encodeURIComponent(email)}` : ""}`;
-        setTimeout(() => router.replace(target), 1000);
+        setTimeout(() => router.replace(target as any), 1000);
       } catch (err: any) {
         setStatus("error");
         setMessage(err?.message || "Verification failed. Please request a new link.");

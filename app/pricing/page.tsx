@@ -138,7 +138,7 @@ export default function PricingPage() {
                     </div>
                   ))}
                   <Button asChild className="mt-4 w-full">
-                    <Link href={pkg.href}>{pkg.cta}</Link>
+                    <a href={pkg.href}>{pkg.cta}</a>
                   </Button>
                 </CardContent>
               </Card>
