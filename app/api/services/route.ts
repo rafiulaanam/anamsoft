@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
+
 export async function GET() {
+  if (isBuild) return NextResponse.json({ data: [] });
   try {
     const services = await prisma.service.findMany({
       orderBy: { createdAt: "desc" },
@@ -14,6 +21,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (isBuild) return NextResponse.json({ data: null });
   try {
     const body = await req.json();
     const { name, slug, description, priceFrom, isFeatured } = body ?? {};
