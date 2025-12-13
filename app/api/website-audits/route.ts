@@ -5,16 +5,7 @@ import {
   sendWebsiteAuditClientConfirmation,
 } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 export async function POST(req: NextRequest) {
-  if (isBuild) {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
   try {
     if (!(prisma as any)?.websiteAudit) {
       throw new Error("WebsiteAudit model is not available. Did you restart after running prisma generate?");
@@ -81,9 +72,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  if (isBuild) {
-    return NextResponse.json({ data: [] });
-  }
   try {
     const audits = await prisma.websiteAudit.findMany({
       orderBy: { createdAt: "desc" },

@@ -1,14 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
 
   try {
     const { id } = params;

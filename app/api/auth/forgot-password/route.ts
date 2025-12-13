@@ -3,18 +3,11 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { sendPasswordResetEmail } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 function isValidEmail(email: string) {
   return /\S+@\S+\.\S+/.test(email);
 }
 
 export async function POST(req: Request) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ success: true });
-  }
 
   try {
     const body = await req.json();

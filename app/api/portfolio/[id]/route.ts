@@ -1,21 +1,11 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-// Allow runtime fetches and avoid prerender issues
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 function notFound() {
   return NextResponse.json({ error: "Portfolio item not found" }, { status: 404 });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) {
-    return NextResponse.json({ data: null });
-  }
   try {
     const item = await prisma.portfolioItem.findUnique({ where: { id: params.id } });
     if (!item) return notFound();
@@ -27,9 +17,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) {
-    return NextResponse.json({ data: null });
-  }
   try {
     const existing = await prisma.portfolioItem.findUnique({ where: { id: params.id } });
     if (!existing) return notFound();
@@ -61,9 +48,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) {
-    return NextResponse.json({ data: null });
-  }
   try {
     const existing = await prisma.portfolioItem.findUnique({ where: { id: params.id } });
     if (!existing) return notFound();

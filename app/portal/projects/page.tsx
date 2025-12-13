@@ -5,7 +5,6 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-export const dynamic = "force-dynamic";
 
 export default async function PortalProjectsPage() {
   const session = await auth();

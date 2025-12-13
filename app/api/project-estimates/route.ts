@@ -5,16 +5,7 @@ import {
   sendProjectEstimateClientConfirmation,
 } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 export async function POST(req: NextRequest) {
-  if (isBuild) {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
   try {
     if (!(prisma as any)?.projectEstimate) {
       throw new Error("ProjectEstimate model is not available. Did you restart after running prisma generate?");
@@ -110,9 +101,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
-  if (isBuild) {
-    return NextResponse.json({ data: [] });
-  }
   try {
     const estimates = await prisma.projectEstimate.findMany({
       orderBy: { createdAt: "desc" },

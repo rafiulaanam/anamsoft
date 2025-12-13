@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   title: "Project estimates | Admin | AnamSoft",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function AdminEstimatesPage() {
   const estimates = await prisma.projectEstimate.findMany({

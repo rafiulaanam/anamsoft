@@ -11,7 +11,6 @@ import { PricingSection } from "@/components/sections/pricing-section";
 import { ProjectEstimatorWizard } from "@/components/sections/project-estimator-wizard";
 import { ConsultationBookingSection } from "@/components/sections/consultation-booking-section";
 
-export const dynamic = "force-dynamic";
 
 const steps = [
   {

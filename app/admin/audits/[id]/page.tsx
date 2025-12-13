@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: "Website audit | Admin | AnamSoft",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function AdminAuditDetailPage({ params }: { params: { id: string } }) {
   const audit = await prisma.websiteAudit.findUnique({

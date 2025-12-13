@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function PATCH(req: NextRequest, { params }: { params: { projectId: string; taskId: string } }) {
-  // Avoid DB/auth work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
 
   try {
     const session = await auth();

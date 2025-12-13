@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  // Avoid DB work during static/Vercel build.
-  if (isBuild) {
-    return NextResponse.json({ data: [] }, { status: 200 });
-  }
 
   try {
     const { prisma } = await import("@/lib/db");
@@ -29,11 +20,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  // Avoid DB work during static/Vercel build.
-  if (isBuild) {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
-
   try {
     const { prisma } = await import("@/lib/db");
     const body = await req.json();

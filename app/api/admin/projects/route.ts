@@ -8,15 +8,7 @@ function slugify(value: string) {
   return `${base}-${suffix}`;
 }
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function GET() {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ data: [] }, { status: 200 });
-  }
-
   try {
     const { prisma } = await import("@/lib/db");
     if (!(prisma as any).project?.findMany) {
@@ -34,11 +26,6 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
-
   try {
     const { prisma } = await import("@/lib/db");
     const body = await req.json();

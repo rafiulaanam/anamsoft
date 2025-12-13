@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AIProjectEstimateInput, generateEstimateReplyWithAI } from "@/lib/ai";
 
-// Ensure this route is always dynamic and runs on the Node runtime to avoid prerender errors.
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 export async function POST(_req: NextRequest, context: { params: { id: string } }) {
-  // During static build (or when Vercel is compiling), avoid DB/API work so Next can finish successfully.
-  if (isBuild) {
-    return NextResponse.json({ subject: "Website estimate for your project", body: "" }, { status: 200 });
-  }
 
   try {
     const { prisma } = await import("@/lib/db");

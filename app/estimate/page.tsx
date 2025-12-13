@@ -1,7 +1,6 @@
 import { EstimateWizard } from "@/components/estimate/estimate-wizard";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = "force-dynamic";
 
 export default function EstimatePage() {
   return (

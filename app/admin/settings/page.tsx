@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 interface SiteConfig {
   id: string;

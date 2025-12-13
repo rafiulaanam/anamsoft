@@ -1,7 +1,6 @@
 import AuditForm from "@/components/audit/audit-form";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = "force-dynamic";
 
 export default function WebsiteAuditPage() {
   return (

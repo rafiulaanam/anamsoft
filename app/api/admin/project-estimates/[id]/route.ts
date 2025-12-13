@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  // During static build (or on Vercel build), avoid DB calls so the build completes.
-  if (isBuild) {
-    return NextResponse.json({ data: null }, { status: 200 });
-  }
 
   try {
     const { prisma } = await import("@/lib/db");

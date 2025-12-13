@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hash } from "bcryptjs";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function POST(req: Request) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ success: true });
-  }
 
   try {
     const body = await req.json();

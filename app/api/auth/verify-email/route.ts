@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function GET(req: Request) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.redirect(new URL("/login?verify=invalid", req.url));
-  }
 
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token") ?? "";
@@ -44,11 +37,6 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ success: true });
-  }
-
   try {
     const body = await req.json().catch(() => ({}));
     const token = typeof body?.token === "string" ? body.token : "";

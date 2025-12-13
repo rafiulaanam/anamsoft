@@ -3,14 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { sendEmailVerificationEmail } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export async function POST(req: NextRequest) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ success: true });
-  }
 
   try {
     const body = await req.json();

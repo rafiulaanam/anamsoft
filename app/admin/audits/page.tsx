@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   title: "Website audits | Admin | AnamSoft",
 };
 
-export const dynamic = "force-dynamic";
 
 const formatDate = (value: Date) =>
   new Date(value).toLocaleString("en-GB", {

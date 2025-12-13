@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { PortalProjectUpdates } from "@/components/portal/portal-project-updates";
 import { PortalProjectChecklist } from "@/components/portal/portal-project-checklist";
 
-export const dynamic = "force-dynamic";
 
 export default async function PortalProjectDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();

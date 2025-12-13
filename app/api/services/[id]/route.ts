@@ -1,18 +1,11 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 function notFound() {
   return NextResponse.json({ error: "Service not found" }, { status: 404 });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) return NextResponse.json({ data: null });
   try {
     if (!(prisma as any)?.service) {
       throw new Error("Service model unavailable");
@@ -27,7 +20,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) return NextResponse.json({ data: null });
   try {
     if (!(prisma as any)?.service) {
       throw new Error("Service model unavailable");
@@ -60,7 +52,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (isBuild) return NextResponse.json({ data: null });
   try {
     if (!(prisma as any)?.service) {
       throw new Error("Service model unavailable");
