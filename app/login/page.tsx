@@ -61,8 +61,29 @@ export default function LoginPage() {
       redirect: false,
     });
     if (result?.error) {
-      setError(result.error || "Invalid credentials");
-      setResendMessage(null);
+      const err = result.error;
+      const normalized = err.toUpperCase();
+
+      if (normalized.includes("EMAIL_NOT_VERIFIED")) {
+        const parts = err.split(":");
+        const cooldown = parts[1] ? Number(parts[1]) : null;
+        setError("Your email is not verified. We sent a new verification link.");
+        setResendMessage(cooldown ? `You can resend again in ${cooldown}s.` : "Verification email sent.");
+        router.push(`/verify-email/pending?email=${encodeURIComponent(email)}`);
+      } else if (normalized.includes("CONFIGURATION") && email) {
+        // Fallback: treat as unverified and resend.
+        await fetch("/api/auth/resend-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }).catch(() => null);
+        setError("Your email is not verified. We sent a new verification link.");
+        setResendMessage("Verification email sent.");
+        router.push(`/verify-email/pending?email=${encodeURIComponent(email)}`);
+      } else {
+        setError("Invalid email or password.");
+        setResendMessage(null);
+      }
       setLoading(false);
       return;
     }

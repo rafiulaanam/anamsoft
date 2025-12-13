@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function GET(req: Request) {
 
@@ -12,12 +13,26 @@ export async function GET(req: Request) {
   }
 
   try {
-    const record = await prisma.verificationToken.findFirst({
-      where: { identifier: email, token },
+    const candidates = await prisma.verificationToken.findMany({
+      where: { identifier: email, expires: { gt: new Date() } },
+      orderBy: { expires: "desc" },
     });
 
-    if (!record || record.expires < new Date()) {
-      return NextResponse.redirect(new URL("/login?verify=invalid", req.url));
+    const record = await (async () => {
+      for (const rec of candidates) {
+        if (rec.token === token) return rec; // legacy plain token support
+        if (await bcrypt.compare(token, rec.token)) return rec;
+      }
+      return null;
+    })();
+
+    if (!record) {
+      return NextResponse.redirect(
+        new URL(
+          `/verify-email/pending?email=${encodeURIComponent(email)}&error=invalid`,
+          req.url
+        )
+      );
     }
 
     await prisma.user.update({
@@ -29,10 +44,14 @@ export async function GET(req: Request) {
       where: { identifier: email },
     });
 
-    return NextResponse.redirect(new URL("/login?verified=1", req.url));
+    return NextResponse.redirect(
+      new URL(`/verify-email/success?verified=1&email=${encodeURIComponent(email)}`, req.url)
+    );
   } catch (error) {
     console.error("Verify email error", error);
-    return NextResponse.redirect(new URL("/login?verify=error", req.url));
+    return NextResponse.redirect(
+      new URL("/verify-email/pending?error=invalid", req.url)
+    );
   }
 }
 
@@ -46,11 +65,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Verification link is missing or invalid." }, { status: 400 });
     }
 
-    const record = await prisma.verificationToken.findFirst({
-      where: { identifier: email, token },
+    const candidates = await prisma.verificationToken.findMany({
+      where: { identifier: email, expires: { gt: new Date() } },
+      orderBy: { expires: "desc" },
     });
 
-    if (!record || record.expires < new Date()) {
+    let match = null;
+    for (const rec of candidates) {
+      if (rec.token === token || (await bcrypt.compare(token, rec.token))) {
+        match = rec;
+        break;
+      }
+    }
+
+    if (!match) {
       return NextResponse.json({ error: "Verification link is invalid or expired." }, { status: 400 });
     }
 

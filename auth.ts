@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/db";
 import { compare } from "bcryptjs";
+import { createAndSendVerificationEmail, VERIFICATION_RESEND_WINDOW_MS } from "@/lib/auth/verification";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -28,7 +29,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!isValid) return null;
 
         if (!user.emailVerified) {
-          throw new Error("Please verify your email before signing in.");
+          const result = await createAndSendVerificationEmail({ email: user.email, name: user.name });
+          const cooldownSeconds = Math.ceil((result?.retryAfterMs ?? VERIFICATION_RESEND_WINDOW_MS) / 1000);
+          throw new Error(`EMAIL_NOT_VERIFIED:${cooldownSeconds}`);
         }
 
         return {

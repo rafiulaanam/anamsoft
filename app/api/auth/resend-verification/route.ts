@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { sendEmailVerificationEmail } from "@/lib/email";
+import { canResendVerification } from "@/lib/auth/verification";
 
 export async function POST(req: NextRequest) {
 
@@ -26,21 +28,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, message: "Email already verified." });
     }
 
-    // clear existing tokens for this email
-    if ((prisma as any).verificationToken?.deleteMany) {
-      await prisma.verificationToken.deleteMany({
-        where: { identifier: email },
+    const rate = await canResendVerification(email);
+    if (!rate.allowed) {
+      return NextResponse.json({
+        success: true,
+        cooldownMs: rate.retryAfterMs,
+        message: "Verification email recently sent.",
       });
     }
 
-    const token = crypto.randomUUID();
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: email },
+    });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const hashed = await bcrypt.hash(token, 10);
     const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
     if ((prisma as any).verificationToken?.create) {
       await prisma.verificationToken.create({
         data: {
           identifier: email,
-          token,
+          token: hashed,
           expires,
         },
       });

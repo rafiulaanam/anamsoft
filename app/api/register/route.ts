@@ -38,18 +38,19 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const token = crypto.randomUUID();
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = await hash(rawToken, 10);
     const expires = new Date(Date.now() + 1000 * 60 * 60);
 
     await prisma.verificationToken.create({
       data: {
         identifier: user.email,
-        token,
+        token: hashedToken,
         expires,
       },
     });
 
-    await sendEmailVerificationEmail(user, token).catch((err) =>
+    await sendEmailVerificationEmail(user, rawToken).catch((err) =>
       console.error("send verification email failed", err)
     );
 

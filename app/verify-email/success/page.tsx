@@ -1,33 +1,38 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function VerifyEmailSuccessPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const email = searchParams.get("email");
+  const email = searchParams.get("email") ?? "";
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/login");
+      window.location.href = "/login?verified=1";
     }, 2000);
     return () => clearTimeout(timer);
-  }, [router]);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-blush-50 flex items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md shadow-soft text-center">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50 flex items-center justify-center px-4 py-12">
+      <Card className="w-full max-w-md text-center shadow-lg border border-pink-100/70">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl font-semibold text-slate-900">Your account is verified</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl">Your account is verified</CardTitle>
+          <p className="text-sm text-slate-600">
             {email ? `The email ${email} is now verified.` : "Your email is now verified."} Redirecting to login...
-          </CardDescription>
+          </p>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-2 text-emerald-700">
-          <CheckCircle2 className="h-8 w-8" />
+        <CardContent className="space-y-4 flex flex-col items-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <p className="text-xs text-slate-500">
+            Not redirected? <Link href="/login?verified=1" className="text-pink-600 hover:text-pink-700">Go to login</Link>
+          </p>
         </CardContent>
       </Card>
     </div>

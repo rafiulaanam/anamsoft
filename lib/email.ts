@@ -531,7 +531,7 @@ export async function sendEmailVerificationEmail(
   try {
     const verifyUrl = `${
       process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-    }/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+    }/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
 
     console.log("Email verification link:", verifyUrl);
 
