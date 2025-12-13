@@ -119,7 +119,7 @@ export default function VerifyEmailPendingPage() {
           </div>
 
           <Button
-            onClick={handleResend}
+            onClick={() => handleResend()}
             disabled={disabled}
             className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500 text-white"
           >
