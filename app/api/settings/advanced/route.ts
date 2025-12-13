@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
+
 const DEFAULTS = {
   heroTitle: "Websites for beauty salons & spas in Vilnius",
   heroSubtitle:
@@ -12,6 +18,9 @@ const DEFAULTS = {
 const numberGuard = (val: unknown) => typeof val === "number" && Number.isFinite(val);
 
 export async function GET() {
+  if (isBuild) {
+    return NextResponse.json({ data: null });
+  }
   try {
     let config = await prisma.siteConfig.findFirst();
     if (!config) {
@@ -31,6 +40,9 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  if (isBuild) {
+    return NextResponse.json({ data: null }, { status: 200 });
+  }
   const session = await auth();
   if (!session || (session.user as any)?.role !== "ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
