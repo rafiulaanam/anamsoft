@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 interface SiteConfig {
   id: string;
   heroTitle: string;
@@ -16,6 +19,16 @@ interface SiteConfig {
 }
 
 export default function AdminSettingsPage() {
+  if (typeof window === "undefined") {
+    return (
+      <div className="space-y-6 max-w-3xl">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
+          <p className="text-sm text-slate-600">Loading…</p>
+        </div>
+      </div>
+    );
+  }
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [form, setForm] = useState<Partial<SiteConfig>>({});
   const [loading, setLoading] = useState(true);
