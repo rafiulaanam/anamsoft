@@ -4,26 +4,11 @@ import { hash } from "bcryptjs";
 import crypto from "crypto";
 import { sendEmailVerificationEmail } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-const isBuild =
-  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
-
 function validateEmail(email: string) {
   return /\S+@\S+\.\S+/.test(email);
 }
 
 export async function POST(req: NextRequest) {
-  if (isBuild) {
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Registration disabled during build.",
-      },
-      { status: 200 }
-    );
-  }
   try {
     const body = await req.json();
     const name = (body?.name as string | undefined)?.trim();
