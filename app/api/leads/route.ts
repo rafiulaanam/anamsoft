@@ -1,25 +1,16 @@
-import { prisma } from "@/lib/db";
-import { sendLeadConfirmationEmail, sendLeadNotificationEmail } from "@/lib/email";
 import { NextRequest, NextResponse } from "next/server";
-import type { LeadStatus } from "@prisma/client";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ data: [] }, { status: 200 });
-  }
-
   try {
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get("status") as LeadStatus | null;
+    const status = searchParams.get("status");
     const search = searchParams.get("search")?.toLowerCase() ?? null;
     const isReadParam = searchParams.get("isRead");
 
-    const where: any = {};
-    if (status && ["NEW", "CONTACTED", "CALL_BOOKED", "PROPOSAL_SENT", "WON", "LOST"].includes(status)) {
+    const where: Record<string, unknown> = {};
+    const allowedStatuses = ["NEW", "CONTACTED", "CALL_BOOKED", "PROPOSAL_SENT", "WON", "LOST"];
+    if (status && allowedStatuses.includes(status)) {
       where.status = status;
     }
     if (isReadParam === "true") where.isRead = true;
@@ -33,64 +24,50 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    if (!(prisma as any).lead?.findMany) {
-      return NextResponse.json({ data: [] }, { status: 200 });
-    }
-
     const leads = await prisma.lead.findMany({
       where,
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ data: leads });
+    return NextResponse.json({ data: leads }, { status: 200 });
   } catch (error) {
     console.error("Error fetching leads", error);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
-  // Avoid DB/email work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
-    return NextResponse.json({ success: true });
-  }
-
   try {
     const body = await req.json();
     const name = (body?.name as string | undefined)?.trim();
     const salonName = (body?.salonName as string | undefined)?.trim();
-    const email = (body?.email as string | undefined)?.trim();
     const website = (body?.website as string | undefined)?.trim();
     const message = (body?.message as string | undefined)?.trim();
 
-    if (!name || !salonName || !email || !message) {
-      return NextResponse.json({ error: "Name, salon name, email and message are required." }, { status: 400 });
-    }
-
-    if (!(prisma as any).lead?.create) {
-      return NextResponse.json({ success: true }, { status: 200 });
+    if (!name || !salonName || !message) {
+      return NextResponse.json(
+        { error: "Name, salon name and message are required." },
+        { status: 400 }
+      );
     }
 
     const lead = await prisma.lead.create({
       data: {
         name,
         salonName,
-        email,
         website: website || null,
         message,
-        status: "NEW",
       },
     });
-
-    try {
-      await sendLeadNotificationEmail(lead);
-      await sendLeadConfirmationEmail({ name: lead.name, salonName: lead.salonName, email: lead.email });
-    } catch (err) {
-      console.error("Error sending lead emails", err);
-    }
 
     return NextResponse.json({ data: lead }, { status: 201 });
   } catch (error) {
     console.error("Error creating lead", error);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

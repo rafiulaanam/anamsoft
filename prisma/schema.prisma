@@ -130,7 +130,7 @@ model Lead {
   id        String     @id @default(auto()) @map("_id") @db.ObjectId
   name      String
   salonName String
-  email     String
+  email     String?
   website   String?
   message   String
   status    LeadStatus @default(NEW)

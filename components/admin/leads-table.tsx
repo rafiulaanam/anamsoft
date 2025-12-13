@@ -25,7 +25,7 @@ interface Lead {
   id: string;
   name: string;
   salonName: string;
-  email: string;
+  email?: string | null;
   website?: string | null;
   message: string;
   status: LeadStatus;

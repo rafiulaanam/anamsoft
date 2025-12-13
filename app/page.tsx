@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Accordion } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ContactForm } from "@/components/contact-form";
 import { LocalBusinessSchema } from "@/components/seo/local-business-schema";
 import { CalendarClock, Palette, Sparkles, Workflow } from "lucide-react";
 import { ContactSection } from "@/components/sections/contact-section";
