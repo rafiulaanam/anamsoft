@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 interface Service {
   id: string;
   name: string;
