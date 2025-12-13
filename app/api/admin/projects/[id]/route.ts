@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
@@ -11,6 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const project = await prisma.project.findUnique({
       where: { id: params.id },
       include: {
@@ -36,6 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const body = await req.json();
     const data: any = {};
     if (typeof body.name === "string") data.name = body.name;
