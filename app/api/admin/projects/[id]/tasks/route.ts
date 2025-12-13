@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+  if (isBuild) {
     return NextResponse.json({ data: [] }, { status: 200 });
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     if (!(prisma as any).projectTask?.findMany) {
       return NextResponse.json({ data: [] }, { status: 200 });
     }
@@ -28,11 +30,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   // Avoid DB work during static/Vercel build.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+  if (isBuild) {
     return NextResponse.json({ data: null }, { status: 200 });
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const body = await req.json();
     const title = body?.title as string | undefined;
     if (!title) {
