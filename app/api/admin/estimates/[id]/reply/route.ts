@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { sendEstimateReplyEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const isBuild =
+  process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1";
+
 export async function POST(req: NextRequest, context: { params: { id: string } }) {
   // During static build (or when Vercel is compiling), avoid DB/email work so Next can finish successfully.
-  if (process.env.NEXT_PHASE === "phase-production-build" || process.env.VERCEL === "1") {
+  if (isBuild) {
     return NextResponse.json({ success: true }, { status: 200 });
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const { subject, body } = await req.json();
     if (!subject || !body) {
       return NextResponse.json({ error: "Subject and message are required." }, { status: 400 });
