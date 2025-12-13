@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { hash } from "bcrypt";
+import { hash } from "bcryptjs";
 import crypto from "crypto";
 import { sendEmailVerificationEmail } from "@/lib/email";
 
