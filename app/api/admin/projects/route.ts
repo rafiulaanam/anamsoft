@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
-
 function slugify(value: string) {
   const base = value
     .toLowerCase()
@@ -20,6 +18,7 @@ export async function GET() {
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     if (!(prisma as any).project?.findMany) {
       return NextResponse.json({ data: [] }, { status: 200 });
     }
@@ -41,6 +40,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const body = await req.json();
     const name = body?.name as string | undefined;
     const clientId = body?.clientId as string | undefined;
