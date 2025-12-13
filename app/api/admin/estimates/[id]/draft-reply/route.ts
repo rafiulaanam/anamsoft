@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { AIProjectEstimateInput, generateEstimateReplyWithAI } from "@/lib/ai";
 
 // Ensure this route is always dynamic and runs on the Node runtime to avoid prerender errors.
@@ -16,6 +15,7 @@ export async function POST(_req: NextRequest, context: { params: { id: string } 
   }
 
   try {
+    const { prisma } = await import("@/lib/db");
     const { id } = context.params;
 
     if (!(prisma as any)?.projectEstimate) {
