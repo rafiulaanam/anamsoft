@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 interface Service {
   id: string;
 }
@@ -20,6 +23,17 @@ interface Lead {
 }
 
 export default function AdminOverviewPage() {
+  if (typeof window === "undefined") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Overview</h1>
+          <p className="text-sm text-slate-600">Anam Soft Admin</p>
+        </div>
+        <p className="text-sm text-slate-600">Loading...</p>
+      </div>
+    );
+  }
   const [services, setServices] = useState<Service[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
