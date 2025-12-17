@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
             projectEstimateId: estimate.id,
             subject,
             body,
-            fromEmail: process.env.EMAIL_FROM ?? "info@rafiulanamllc.com",
+            fromEmail: process.env.EMAIL_FROM ?? "hello@anamsoft.com",
             toEmail: estimate.email,
           },
         });

@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const DEFAULT_FROM = process.env.EMAIL_FROM ?? "AnamSoft <info@rafiulanamllc.com>";
+const DEFAULT_FROM = process.env.EMAIL_FROM ?? "AnamSoft <hello@anamsoft.com>";
 
 export interface ProjectEstimateEmailPayload {
   id: string;
@@ -91,7 +91,7 @@ export async function sendLeadNotificationEmail(lead: LeadEmailPayload) {
   try {
     const { error } = await resend.emails.send({
       from: DEFAULT_FROM,
-      to: [process.env.EMAIL_TO ?? "rafiulanamllc@gmail.com"],
+      to: [process.env.EMAIL_TO ?? "hello@anamsoft.com"],
       subject: `New salon lead – ${lead.salonName}`,
       html: `
         <div style="font-family: Arial, sans-serif; color: #0f172a;">

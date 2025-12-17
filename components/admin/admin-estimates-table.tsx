@@ -266,7 +266,7 @@ export function AdminEstimatesTable({ estimates }: AdminEstimatesTableProps) {
                   </Button>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Reply is emailed from {process.env.NEXT_PUBLIC_FROM_EMAIL || "info@rafiulanamllc.com"}. Add a prior
+                  Reply is emailed from {process.env.NEXT_PUBLIC_FROM_EMAIL || "hello@anamsoft.com"}. Add a prior
                   Message-ID above to thread in the same conversation (optional). Client replies will arrive in your
                   inbox.
                 </p>
