@@ -192,10 +192,6 @@ export function LeadsTable({ initialLeads, initialStatusFilter, initialUnreadOnl
     setAiDialogLead(lead);
   };
 
-  const handleLogActivity = () => {
-    toast({ title: "Log activity", description: "Activity logging will be wired soon." });
-  };
-
   const handleEmailAction = () => {
     if (detailLead) handleDraftReply(detailLead);
   };
@@ -210,6 +206,10 @@ export function LeadsTable({ initialLeads, initialStatusFilter, initialUnreadOnl
 
   const handleAddTaskAction = () => {
     toast({ title: "Add task", description: "Task builder will appear here soon." });
+  };
+
+  const handleMeetingAction = () => {
+    toast({ title: "Book meeting", description: "Meeting scheduler will open soon." });
   };
 
   const handleReplyLead = (lead: LeadRow) => {
@@ -772,20 +772,19 @@ export function LeadsTable({ initialLeads, initialStatusFilter, initialUnreadOnl
         </div>
       </div>
 
-      <LeadDetailDrawer
-        lead={detailLead}
-        open={!!detailLead}
-        onClose={() => setDetailLead(null)}
-        onStatusChange={handleStatusChange}
-        savingNotes={savingNotes}
-        notesSaved={notesSaved}
-        onNotesChange={(value) => detailLead && setDetailLead({ ...detailLead, notes: value })}
-        onLogActivity={handleLogActivity}
-        onEmail={handleEmailAction}
-        onCall={handleCallAction}
-        onAddNote={handleAddNoteAction}
-        onAddTask={handleAddTaskAction}
-      />
+      {detailLead && (
+        <LeadDetailDrawer
+          lead={detailLead}
+          open
+          onClose={() => setDetailLead(null)}
+          onStatusChange={handleStatusChange}
+          onAddTask={handleAddTaskAction}
+          onEmail={handleEmailAction}
+          onCall={handleCallAction}
+          onMeeting={handleMeetingAction}
+          onAddNote={handleAddNoteAction}
+        />
+      )}
 
       <LeadAiReplyDialog lead={aiDialogLead} open={!!aiDialogLead} onClose={closeAiDialog} />
     </section>
