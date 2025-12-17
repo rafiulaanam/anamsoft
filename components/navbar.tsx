@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu, User, LogOut, LogIn, UserPlus, X, Folder } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Route } from "next";
 
 const anchorSections = ["home", "process", "portfolio", "faq", "contact", "about"];
@@ -80,7 +81,19 @@ export function Navbar() {
       }`}
     >
       <div className="section-shell flex h-16 items-center justify-between">
-        <div className="font-display text-lg font-semibold text-blush-700">Anam Soft</div>
+        <Link
+          href="/"
+          className="text-blush-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-300 focus-visible:ring-offset-2"
+        >
+          <Image
+            src="/logo.svg"
+            alt="Anam Soft logo"
+            width={272}
+            height={68}
+            className="w-[17rem] max-w-full object-contain drop-shadow-[0_15px_35px_rgba(0,0,0,0.25)]"
+            priority
+          />
+        </Link>
         <nav className="hidden md:flex items-center gap-6">{linkItems}</nav>
         <div className="hidden sm:flex items-center gap-3">
           {status === "authenticated" ? (

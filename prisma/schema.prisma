@@ -13,19 +13,31 @@ enum Role {
   CLIENT
 }
 
-enum LeadStatus {
-  NEW
-  CONTACTED
-  CALL_BOOKED
-  PROPOSAL_SENT
-  WON
-  LOST
+enum LeadPriority {
+  LOW
+  MEDIUM
+  HIGH
 }
 
-enum LeadSource {
-  CONTACT
-  ESTIMATE
-  AUDIT
+enum LeadStatus {
+  NEW
+  OPEN
+  IN_PROGRESS
+  ATTEMPTED_TO_CONTACT
+  CONNECTED
+  CONTACTED
+  CALL_BOOKED
+  APPOINTMENT_SCHEDULED
+  QUALIFIED_TO_BUY
+  CONTRACT_SENT
+  OPEN_DEAL
+  CLOSED_WON
+  CLOSED_LOST
+  UNQUALIFIED
+  BAD_TIMING
+  NOT_A_FIT
+  WON
+  LOST
 }
 
 enum ProjectStatus {
@@ -33,14 +45,35 @@ enum ProjectStatus {
   DESIGN
   DEVELOPMENT
   REVIEW
-  LAUNCHED
-  PAUSED
+  DEPLOYED
+  SUPPORT
 }
 
+// DEPRECATED / UNUSED (safe to remove later) — TODO 2025-12-14: Confirm no code depends on this before removing.
 enum ProjectSourceType {
   MANUAL
   ESTIMATE
   AUDIT
+}
+
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  DONE
+}
+
+enum FileType {
+  FIGMA
+  DOC
+  CONTRACT
+  INVOICE
+  ASSET
+  OTHER
+}
+
+enum DeploymentEnvironment {
+  STAGING
+  PRODUCTION
 }
 
 model User {
@@ -53,7 +86,6 @@ model User {
   role           Role      @default(USER)
   accounts       Account[]
   sessions       Session[]
-  projects       Project[] @relation("UserProjects")
 }
 
 model Account {
@@ -104,14 +136,28 @@ model PasswordResetToken {
 }
 
 model Service {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  slug        String   @unique
-  description String
-  priceFrom   Int?
-  isFeatured  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  title            String
+  slug             String   @unique
+  shortDescription String
+  description      String
+  icon             String?
+  imageUrl         String?
+  startingPrice    Int?
+  currency         String   @default("EUR")
+  deliveryDaysMin  Int?
+  deliveryDaysMax  Int?
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  metaTitle        String?
+  metaDescription  String?
+  ogImageUrl       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  deletedAt        DateTime?
+
+  packages ServicePackage[]
+  leads    Lead[] @relation("ServiceLeads")
 }
 
 model PortfolioItem {
@@ -128,21 +174,140 @@ model PortfolioItem {
 }
 
 model Lead {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  salonName String
-  email     String?
-  website   String?
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  fullName        String?
+  email           String
+  phone           String?
+  company         String?
+  website         String?
+  message         String
+  source          String        @default("website_form")
+  serviceInterest String?
+  serviceId       String?       @db.ObjectId
+  service         Service?      @relation("ServiceLeads", fields: [serviceId], references: [id], onDelete: SetNull)
+  priority        LeadPriority  @default(MEDIUM)
+  leadStatus      LeadStatus    @default(NEW)
+  unread          Boolean       @default(true)
+  assignedTo      String?
+  lastContactedAt DateTime?
+  nextFollowUpAt  DateTime?
+  targetDeadline  DateTime?
+  mustHaveFeatures Json?
+  referenceSites   Json?
+  decisionMaker    DecisionMaker @default(UNKNOWN)
+  meetingAt        DateTime?
+  meetingType      MeetingType?
+  meetingLink      String?
+  qualificationNotes String?
+  decisionCriteriaNotes String?
+  decisionProcessNotes String?
+  paperProcessNotes String?
+  championIdentified Boolean @default(false)
+  competitionNotes String?
+  bantBudgetConfirmed Boolean    @default(false)
+  bantAuthorityConfirmed Boolean @default(false)
+  bantNeedConfirmed Boolean      @default(false)
+  bantTimelineConfirmed Boolean  @default(false)
+  leadScore         Int          @default(0)
+  disqualifyReason  String?
+  disqualifyNote    String?
+  score             Int          @default(0)
+  spamScore         Int          @default(0)
+  notes             String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tags       LeadTagJoin[]
+  activities LeadActivity[]
+  projects   Project[] @relation("LeadProjects")
+
+  @@index([leadStatus], map: "Lead_leadStatus_idx")
+  @@index([nextFollowUpAt], map: "Lead_nextFollowUpAt_idx")
+  @@index([unread], map: "Lead_unread_idx")
+  @@index([createdAt], map: "Lead_createdAt_idx")
+  @@index([source], map: "Lead_source_idx")
+  @@index([priority], map: "Lead_priority_idx")
+  @@index([assignedTo], map: "Lead_assignedTo_idx")
+}
+
+model LeadTag {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+
+  leads LeadTagJoin[]
+}
+
+model LeadTagJoin {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  leadId String @db.ObjectId
+  tagId  String @db.ObjectId
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  LeadTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+}
+
+model LeadActivity {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  leadId    String   @db.ObjectId
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String
   message   String
-  status    LeadStatus @default(NEW)
-  isRead    Boolean    @default(false)
-  notes     String?
-  source    LeadSource @default(CONTACT)
-  budgetRange String?
-  reason      String?
-  howHeard    String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime?  @updatedAt
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+// DEPRECATED / UNUSED (safe to remove later) — TODO 2025-12-14: Remove if no legacy data requires it.
+enum LeadBudgetRange {
+  UNKNOWN
+  UNDER_500
+  BETWEEN_500_AND_1000 @map("_500_1000")
+  BETWEEN_1000_AND_3000 @map("_1000_3000")
+  BETWEEN_3000_AND_6000 @map("_3000_6000")
+  ABOVE_6000 @map("_6000_PLUS")
+}
+
+enum DecisionMaker {
+  UNKNOWN
+  DECISION_MAKER
+  INFLUENCER
+  NEEDS_APPROVAL
+}
+
+enum MeetingType {
+  CALL
+  VIDEO
+  IN_PERSON
+}
+
+model ServicePackage {
+  id            String             @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId     String             @db.ObjectId
+  service       Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  name          String
+  price         Int
+  currency      String             @default("EUR")
+  deliveryDays  Int?
+  isRecommended Boolean            @default(false)
+  isActive      Boolean            @default(true)
+  sortOrder     Int                @default(0)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+
+  items ServicePackageItem[]
+}
+
+model ServicePackageItem {
+  id         String          @id @default(auto()) @map("_id") @db.ObjectId
+  packageId  String          @db.ObjectId
+  pkg        ServicePackage  @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  text       String
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  deletedAt  DateTime?
 }
 
 model SiteConfig {
@@ -203,43 +368,170 @@ model WebsiteAudit {
 }
 
 model Project {
+  id             String                 @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  slug           String?
+  clientName     String?
+  clientEmail    String?
+  leadId         String?                @db.ObjectId
+  lead           Lead?                  @relation("LeadProjects", fields: [leadId], references: [id])
+  status         ProjectStatus          @default(PLANNING)
+  startDate      DateTime?
+  deadline       DateTime?
+  techStack      String[]
+  repoUrl        String?
+  stagingUrl     String?
+  productionUrl  String?
+  scopeSummary   String
+  isArchived     Boolean                @default(false)
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  deletedBy      String?
+  deleteReason   String?
+  sortOrder      Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  requirements   ProjectRequirement[]
+  milestones     ProjectMilestone[]
+  files          ProjectFile[]
+  deployments    ProjectDeployment[]
+  activities     ProjectActivity[]
+
+  @@index([slug], map: "Project_slug_idx")
+  @@index([deletedAt], map: "Project_deletedAt_idx")
+  @@index([archivedAt], map: "Project_archivedAt_idx")
+}
+
+model ProjectRequirement {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId  String   @db.ObjectId
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  group      String
+  label      String
+  isDone     Boolean  @default(false)
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ProjectMilestone {
+  id         String          @id @default(auto()) @map("_id") @db.ObjectId
+  projectId  String          @db.ObjectId
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title      String
+  dueDate    DateTime?
+  status     MilestoneStatus @default(NOT_STARTED)
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model ProjectFile {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId  String   @db.ObjectId
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name       String
+  url        String
+  type       FileType
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ProjectDeployment {
+  id           String                @id @default(auto()) @map("_id") @db.ObjectId
+  projectId    String                @db.ObjectId
+  project      Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment  DeploymentEnvironment
+  versionTag   String?
+  notes        String?
+  deployedAt   DateTime              @default(now())
+}
+
+model ProjectActivity {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId  String   @db.ObjectId
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type       String
+  message    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+}
+
+enum AmazonFulfillmentType {
+  FBA
+  FBM
+}
+
+enum AmazonProductStatus {
+  PLANNING
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+}
+
+model Business {
   id          String            @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  slug        String            @unique
-  summary     String?
+  legalName   String?
   type        String?
-  status      ProjectStatus     @default(PLANNING)
-  clientId    String            @db.ObjectId
-  client      User              @relation("UserProjects", fields: [clientId], references: [id])
-  sourceType  ProjectSourceType @default(MANUAL)
-  sourceId    String?
-  startDate   DateTime?
-  dueDate     DateTime?
+  country     String?
+  state       String?
+  city        String?
+  registrationNumber String?
+  taxId       String?
+  notes       String?
+
+  documents   BusinessDocument[]
+  amazonProducts AmazonProduct[]
+
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
-  tasks       ProjectTask[]
-  updates     ProjectUpdate[]
 }
 
-model ProjectTask {
-  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-  projectId           String
-  project             Project  @relation(fields: [projectId], references: [id])
-  title               String
-  description         String?
-  isRequired          Boolean  @default(true)
-  isCompletedByClient Boolean  @default(false)
-  order               Int      @default(0)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+model BusinessDocument {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+
+  business    Business  @relation(fields: [businessId], references: [id])
+  businessId  String    @db.ObjectId
+
+  title       String
+  category    String
+  storageUrl  String?
+  fileKey     String?
+  status      String?
+
+  issueDate   DateTime?
+  expiryDate  DateTime?
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-model ProjectUpdate {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  title     String
-  message   String?
-  createdBy String?
-  createdAt DateTime @default(now())
+model AmazonProduct {
+  id          String                @id @default(auto()) @map("_id") @db.ObjectId
+
+  business    Business              @relation(fields: [businessId], references: [id])
+  businessId  String                @db.ObjectId
+
+  sku         String
+  asin        String?
+  marketplace String?
+  title       String
+
+  fulfillmentType AmazonFulfillmentType
+  status      AmazonProductStatus   @default(PLANNING)
+
+  costPrice   Float?
+  sellPrice   Float?
+  currency    String?
+
+  stockQty    Int?
+  reorderLevel Int?
+
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

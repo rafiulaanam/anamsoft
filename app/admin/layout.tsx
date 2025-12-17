@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { AdminShellWithPath } from "@/components/admin/admin-shell-with-path";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -8,5 +9,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login");
   }
 
-  return <AdminShellWithPath>{children}</AdminShellWithPath>;
+  const [leadsCount, unreadLeadsCount] = await Promise.all([
+    prisma.lead.count().catch(() => 0),
+    prisma.lead.count({ where: { unread: true } }).catch(() => 0),
+  ]);
+
+  return (
+    <AdminShellWithPath leadsCount={leadsCount} unreadLeadsCount={unreadLeadsCount}>
+      {children}
+    </AdminShellWithPath>
+  );
 }

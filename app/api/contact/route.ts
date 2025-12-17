@@ -5,55 +5,54 @@ import {
   sendContactLeadConfirmationEmail,
   sendContactLeadEmailToAdmin,
 } from "@/lib/email";
+import { revalidatePath } from "next/cache";
+
+type ContactBody = {
+  name?: string;
+  fullName?: string;
+  email?: string;
+  businessName?: string;
+  websiteUrl?: string;
+  budgetRange?: string;
+  reason?: string;
+  message?: string;
+  howHeard?: string;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const {
-      name,
-      email,
-      businessName,
-      websiteUrl,
-      budgetRange,
-      reason,
-      message,
-      howHeard,
-    } = body as {
-      name?: string;
-      email?: string;
-      businessName?: string;
-      websiteUrl?: string;
-      budgetRange?: string;
-      reason?: string;
-      message?: string;
-      howHeard?: string;
-    };
+    const body = (await req.json()) as ContactBody;
+    const fullName = (body.fullName ?? body.name ?? "").trim();
+    const email = (body.email ?? "").trim();
+    const message = (body.message ?? "").trim();
 
-    if (!name || !email) {
-      return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
+    if (!fullName || !email || !message) {
+      return NextResponse.json(
+        { error: "Full name, email, and message are required." },
+        { status: 400 }
+      );
     }
 
     const payload: ContactLeadPayload = {
-      name: name.trim(),
-      email: email.trim(),
-      businessName: businessName?.trim() || undefined,
-      websiteUrl: websiteUrl?.trim() || undefined,
-      budgetRange: budgetRange?.trim() || undefined,
-      reason: reason?.trim() || undefined,
-      howHeard: howHeard?.trim() || undefined,
-      message: message?.trim() || undefined,
+      name: fullName,
+      email,
+      businessName: body.businessName?.trim() || undefined,
+      websiteUrl: body.websiteUrl?.trim() || undefined,
+      budgetRange: body.budgetRange?.trim() || undefined,
+      reason: body.reason?.trim() || undefined,
+      howHeard: body.howHeard?.trim() || undefined,
+      message,
     };
 
     const data: any = {
-      name: payload.name,
+      fullName,
       salonName: payload.businessName || "Contact",
       email: payload.email,
       website: payload.websiteUrl || null,
-      message: payload.message || "",
+      message: payload.message,
       status: "NEW",
     };
 
-    // Optional fields fallback: if schema lacks columns, append to notes for now
     const extras: string[] = [];
     if (payload.budgetRange) extras.push(`Budget: ${payload.budgetRange}`);
     if (payload.reason) extras.push(`Reason: ${payload.reason}`);
@@ -65,16 +64,24 @@ export async function POST(req: NextRequest) {
       data.source = "CONTACT";
     }
 
-    let leadId: string | null = null;
+    let leadId: string;
     try {
-      if ((prisma as any).lead?.create) {
-        const lead = await prisma.lead.create({ data });
-        leadId = lead?.id ?? null;
-      }
-    } catch (err) {
-      console.error("Contact lead create failed", err);
-      // continue to emails even if DB is unavailable
+      const lead = await prisma.lead.create({ data });
+      leadId = lead.id;
+      console.info("Contact lead persisted", {
+        leadId,
+        fullName,
+        email,
+      });
+    } catch (error) {
+      console.error("Contact lead create failed", error);
+      return NextResponse.json(
+        { ok: false, error: "Failed to save contact lead." },
+        { status: 500 }
+      );
     }
+
+    revalidatePath("/admin/leads");
 
     let siteConfig = null;
     try {
@@ -95,7 +102,7 @@ export async function POST(req: NextRequest) {
     // non-blocking confirmation
     sendContactLeadConfirmationEmail(payload).catch((err) => console.error("Contact confirmation error", err));
 
-    return NextResponse.json({ success: true, data: { id: leadId } });
+    return NextResponse.json({ ok: true, data: { id: leadId } }, { status: 201 });
   } catch (error) {
     console.error("Contact submission error", error);
     return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });

@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, context: { params: { id: string } }
     try {
       await prisma.projectEstimate.update({
         where: { id: estimate.id },
-        data: { status: "CONTACTED" },
+        data: { status: "CONNECTED" },
       });
     } catch (err) {
       console.error("Status update failed (field may be missing).", err);

@@ -22,12 +22,17 @@ import {
   ChevronRight,
   Globe,
   LogOut,
+  Briefcase,
+  FileText,
+  Box,
 } from "lucide-react";
 import type { Route } from "next";
 
 interface AdminShellProps {
   children: React.ReactNode;
   currentPath: string;
+  leadsCount?: number;
+  unreadLeadsCount?: number;
 }
 
 const adminNavItems: { label: string; href: Route; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -39,15 +44,47 @@ const adminNavItems: { label: string; href: Route; icon: React.ComponentType<{ c
   { label: "Estimates", href: "/admin/estimates" as Route, icon: FileSpreadsheet },
   { label: "Website audits", href: "/admin/audits" as Route, icon: Search },
   { label: "Kanban", href: "/admin/kanban" as Route, icon: KanbanSquare },
+  { label: "Business", href: "/admin/business" as Route, icon: Briefcase },
+  { label: "Documents", href: "/admin/business/documents" as Route, icon: FileText },
+  { label: "Amazon products", href: "/admin/business/products" as Route, icon: Box },
   { label: "Settings", href: "/admin/settings" as Route, icon: Settings },
 ];
 
-export function AdminShell({ children, currentPath }: AdminShellProps) {
+export function AdminShell({ children, currentPath, leadsCount, unreadLeadsCount }: AdminShellProps) {
   const { data: session } = useSession();
+  const [liveLeadsCount, setLiveLeadsCount] = React.useState(leadsCount);
+  const [liveUnreadCount, setLiveUnreadCount] = React.useState(unreadLeadsCount);
   const [isCollapsed, setIsCollapsed] = useLocalStorage<boolean>("admin-sidebar-collapsed", false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const toggleCollapsed = () => setIsCollapsed((prev) => !prev);
+
+  React.useEffect(() => {
+    setLiveLeadsCount(leadsCount);
+    setLiveUnreadCount(unreadLeadsCount);
+  }, [leadsCount, unreadLeadsCount]);
+
+  React.useEffect(() => {
+    let active = true;
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch("/api/leads/summary", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!active) return;
+        if (typeof data.total === "number") setLiveLeadsCount(data.total);
+        if (typeof data.unread === "number") setLiveUnreadCount(data.unread);
+      } catch (err) {
+        console.error("Lead summary fetch failed", err);
+      }
+    };
+    fetchCounts();
+    const id = setInterval(fetchCounts, 30000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
 
   const SidebarContent = ({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) => (
     <div className="flex h-full flex-col">
@@ -67,6 +104,9 @@ export function AdminShell({ children, currentPath }: AdminShellProps) {
           {adminNavItems.map((item) => {
             const Icon = item.icon;
             const active = currentPath === item.href || currentPath.startsWith(`${item.href}/`);
+            const showUnread = false;
+            const showTotal = item.label === "Leads" && typeof liveLeadsCount === "number" && liveLeadsCount > 0;
+            const labelSuffix = showTotal ? ` (${liveLeadsCount})` : "";
             return (
               <Link
                 key={item.href}
@@ -79,10 +119,20 @@ export function AdminShell({ children, currentPath }: AdminShellProps) {
                   collapsed && "justify-center px-2"
                 )}
                 onClick={onNavigate}
-                aria-label={collapsed ? item.label : undefined}
+                aria-label={collapsed ? `${item.label}${labelSuffix}` : undefined}
               >
                 <Icon className="h-4 w-4" />
-                {!collapsed && <span>{item.label}</span>}
+                {!collapsed && (
+                  <span className="flex items-center gap-2">
+                    {item.label}
+                    {labelSuffix && <span className="text-xs text-muted-foreground">{labelSuffix}</span>}
+                    {showUnread && (
+                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                        {unreadLeadsCount}
+                      </span>
+                    )}
+                  </span>
+                )}
               </Link>
             );
           })}

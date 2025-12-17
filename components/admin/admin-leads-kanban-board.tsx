@@ -32,6 +32,17 @@ export type KanbanLead = {
   createdAt: Date;
 };
 
+const leadBoardStatuses: LeadStatus[] = [
+  "NEW",
+  "IN_PROGRESS",
+  "APPOINTMENT_SCHEDULED",
+  "QUALIFIED_TO_BUY",
+  "CONTRACT_SENT",
+  "CLOSED_WON",
+  "CLOSED_LOST",
+  "NOT_A_FIT",
+];
+
 interface AdminLeadsKanbanBoardProps {
   leads: KanbanLead[];
 }
@@ -46,17 +57,14 @@ export function AdminLeadsKanbanBoard({ leads }: AdminLeadsKanbanBoardProps) {
   const [statusUpdatingId, setStatusUpdatingId] = useState<string | null>(null);
   const [dragged, setDragged] = useState<KanbanLead | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<Record<LeadStatus, { title: string; notes: string }>>({
-    NEW: { title: "", notes: "" },
-    CONTACTED: { title: "", notes: "" },
-    CALL_BOOKED: { title: "", notes: "" },
-    PROPOSAL_SENT: { title: "", notes: "" },
-    WON: { title: "", notes: "" },
-    LOST: { title: "", notes: "" },
-  });
+  const [drafts, setDrafts] = useState<Record<LeadStatus, { title: string; notes: string }>>(
+    leadBoardStatuses.reduce((acc, status) => {
+      acc[status] = { title: "", notes: "" };
+      return acc;
+    }, {} as Record<LeadStatus, { title: string; notes: string }>)
+  );
 
-  const columnsOrder: LeadStatus[] = ["NEW", "CONTACTED", "CALL_BOOKED", "PROPOSAL_SENT", "WON", "LOST"];
-  const statusOptions: LeadStatus[] = ["NEW", "CONTACTED", "CALL_BOOKED", "PROPOSAL_SENT", "WON", "LOST"];
+  const columnsOrder: LeadStatus[] = leadBoardStatuses;
 
   const filteredLeads = useMemo(() => {
     const combined = [...localLeads, ...manualCards];
@@ -74,14 +82,10 @@ export function AdminLeadsKanbanBoard({ leads }: AdminLeadsKanbanBoardProps) {
   }, [localLeads, manualCards, filterSource, search]);
 
   const leadsByStatus = useMemo(() => {
-    const map: Record<LeadStatus, KanbanLead[]> = {
-      NEW: [],
-      CONTACTED: [],
-      CALL_BOOKED: [],
-      PROPOSAL_SENT: [],
-      WON: [],
-      LOST: [],
-    };
+    const map = leadBoardStatuses.reduce((acc, status) => {
+      acc[status] = [];
+      return acc;
+    }, {} as Record<LeadStatus, KanbanLead[]>);
     for (const lead of filteredLeads) {
       map[lead.status]?.push(lead);
     }

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AuthSessionProvider } from "@/components/auth/session-provider";
 import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ToastProvider>
           <AuthSessionProvider>
             {children}
+            <ScrollToTop />
           </AuthSessionProvider>
           <Toaster />
         </ToastProvider>

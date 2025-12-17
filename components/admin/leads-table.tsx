@@ -1,66 +1,59 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Mail,
-  Trash,
-  Filter,
-  RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Filter, RefreshCw, ChevronLeft, ChevronRight, Loader2, Columns } from "lucide-react";
 import type { LeadStatus } from "@prisma/client";
-
-interface Lead {
-  id: string;
-  name: string;
-  salonName: string;
-  email?: string | null;
-  website?: string | null;
-  message: string;
-  status: LeadStatus;
-  isRead: boolean;
-  notes?: string | null;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { useToast } from "@/components/ui/use-toast";
+import { LeadQuickViews } from "@/components/admin/lead-quick-views";
+import { LeadDetailDrawer } from "@/components/admin/lead-detail-drawer";
+import { LeadAiReplyDialog } from "@/components/admin/lead-ai-reply-dialog";
+import { LeadRowActions } from "@/components/admin/lead-row-actions";
+import { useLeadsFilters } from "@/hooks/use-leads-filters";
+import { formatRelativeTime, getBudgetBadge, getLeadSourceLabel, hasReplyActivity, isOverdueLead } from "@/lib/lead-utils";
+import type { LeadRow } from "@/types/lead";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 
 const formatDate = (date: string) =>
   new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-const statusOptions: { label: string; value: LeadStatus | "ALL"; color: string }[] = [
-  { label: "All", value: "ALL", color: "bg-slate-200" },
-  { label: "New", value: "NEW", color: "bg-slate-300" },
-  { label: "Contacted", value: "CONTACTED", color: "bg-blue-200" },
-  { label: "Call booked", value: "CALL_BOOKED", color: "bg-purple-200" },
-  { label: "Proposal sent", value: "PROPOSAL_SENT", color: "bg-amber-200" },
-  { label: "Won", value: "WON", color: "bg-emerald-200" },
-  { label: "Lost", value: "LOST", color: "bg-rose-200" },
+const statusOptions: { label: string; value: LeadStatus | "ALL" }[] = [
+  { label: "All", value: "ALL" },
+  { label: "New", value: "NEW" },
+  { label: "In progress", value: "IN_PROGRESS" },
+  { label: "Appointment scheduled", value: "APPOINTMENT_SCHEDULED" },
+  { label: "Qualified to buy", value: "QUALIFIED_TO_BUY" },
+  { label: "Contract sent", value: "CONTRACT_SENT" },
+  { label: "Closed won", value: "CLOSED_WON" },
+  { label: "Closed lost", value: "CLOSED_LOST" },
+  { label: "Not a fit", value: "NOT_A_FIT" },
 ];
 
 function statusBadgeColor(status: LeadStatus) {
   switch (status) {
     case "NEW":
       return "bg-slate-100 text-slate-800";
-    case "CONTACTED":
+    case "IN_PROGRESS":
+    case "APPOINTMENT_SCHEDULED":
       return "bg-blue-100 text-blue-800";
-    case "CALL_BOOKED":
-      return "bg-purple-100 text-purple-800";
-    case "PROPOSAL_SENT":
-      return "bg-amber-100 text-amber-800";
-    case "WON":
+    case "QUALIFIED_TO_BUY":
       return "bg-emerald-100 text-emerald-800";
-    case "LOST":
+    case "CONTRACT_SENT":
+      return "bg-amber-100 text-amber-800";
+    case "CLOSED_WON":
+      return "bg-emerald-100 text-emerald-800";
+    case "CLOSED_LOST":
+    case "NOT_A_FIT":
       return "bg-rose-100 text-rose-800";
     default:
       return "bg-slate-100 text-slate-800";
@@ -71,54 +64,77 @@ function statusLabel(status: LeadStatus) {
   switch (status) {
     case "NEW":
       return "New";
-    case "CONTACTED":
-      return "Contacted";
-    case "CALL_BOOKED":
-      return "Call booked";
-    case "PROPOSAL_SENT":
-      return "Proposal sent";
-    case "WON":
-      return "Won";
-    case "LOST":
-      return "Lost";
+    case "IN_PROGRESS":
+      return "In progress";
+    case "APPOINTMENT_SCHEDULED":
+      return "Appointment scheduled";
+    case "QUALIFIED_TO_BUY":
+      return "Qualified to buy";
+    case "CONTRACT_SENT":
+      return "Contract sent";
+    case "CLOSED_WON":
+      return "Closed won";
+    case "CLOSED_LOST":
+      return "Closed lost";
+    case "NOT_A_FIT":
+      return "Not a fit";
     default:
-      return status;
+      return status.replaceAll("_", " ").toLowerCase();
   }
 }
 
 interface LeadsTableProps {
-  initialLeads: Lead[];
+  initialLeads: LeadRow[];
+  initialStatusFilter?: LeadStatus | "ALL";
+  initialUnreadOnly?: boolean;
 }
 
-export function LeadsTable({ initialLeads }: LeadsTableProps) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+export function LeadsTable({ initialLeads, initialStatusFilter, initialUnreadOnly }: LeadsTableProps) {
+  const { toast } = useToast();
+  const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
+  const {
+    filteredLeads,
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    unreadOnly,
+    setUnreadOnly,
+    quickView,
+    setQuickView,
+    savedFilter,
+    toggleSavedFilter,
+    clearSavedFilter,
+  } = useLeadsFilters(leads, { initialStatusFilter, initialUnreadOnly });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "ALL">("ALL");
-  const [unreadOnly, setUnreadOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [detailLead, setDetailLead] = useState<Lead | null>(null);
+  const [detailLead, setDetailLead] = useState<LeadRow | null>(null);
   const [savingNotes, setSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [aiDialogLead, setAiDialogLead] = useState<LeadRow | null>(null);
+  const [creatingTestLead, setCreatingTestLead] = useState(false);
+  const [showOwnerColumn, setShowOwnerColumn] = useState(false);
+  const [showValueColumn, setShowValueColumn] = useState(false);
   const pageSize = 10;
+  const notesTimer = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const totalColumnCount = 7 + Number(showOwnerColumn) + Number(showValueColumn);
 
   const fetchLeads = async () => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "ALL") params.set("status", statusFilter);
-      if (unreadOnly) params.set("isRead", "false");
-      if (search.trim()) params.set("search", search.trim());
-      const res = await fetch(`/api/leads?${params.toString()}`);
+      const res = await fetch(`/api/leads`);
       if (!res.ok) throw new Error("Failed to load leads");
       const data = await res.json();
-      setLeads(data.data ?? []);
+      setLeads((data.data as LeadRow[]) ?? []);
       setSelected(new Set());
       setCurrentPage(1);
     } catch (err: any) {
       setError(err?.message || "Failed to load leads");
+      toast({ title: "Load failed", description: err?.message || "Unable to refresh leads", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -127,14 +143,37 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
   useEffect(() => {
     fetchLeads();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, unreadOnly]);
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const isTyping = tag === "input" || tag === "textarea" || target?.getAttribute("contenteditable") === "true";
+      if (event.key === "/" && !isTyping) {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (event.key === "Escape") {
+        setDetailLead(null);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const paginatedLeads = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return leads.slice(start, start + pageSize);
-  }, [leads, currentPage]);
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, currentPage, pageSize]);
 
-  const totalPages = Math.max(1, Math.ceil(leads.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -145,7 +184,48 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
     });
   };
 
-  const bulkUpdate = async (updates: Partial<Lead>) => {
+  const handleOpenLead = (lead: LeadRow) => {
+    setDetailLead(lead);
+  };
+
+  const handleDraftReply = (lead: LeadRow) => {
+    setAiDialogLead(lead);
+  };
+
+  const handleLogActivity = () => {
+    toast({ title: "Log activity", description: "Activity logging will be wired soon." });
+  };
+
+  const handleEmailAction = () => {
+    if (detailLead) handleDraftReply(detailLead);
+  };
+
+  const handleCallAction = () => {
+    toast({ title: "Call action", description: "Call dialing is not configured yet." });
+  };
+
+  const handleAddNoteAction = () => {
+    toast({ title: "Add note", description: "Notes flow coming soon." });
+  };
+
+  const handleAddTaskAction = () => {
+    toast({ title: "Add task", description: "Task builder will appear here soon." });
+  };
+
+  const handleReplyLead = (lead: LeadRow) => {
+    toast({ title: "Reply flow not connected", description: "We will wire the reply modal soon.", variant: "default" });
+    console.info("Reply flow not configured yet for lead", lead.id);
+  };
+
+  const handleOpenLeadInNewTab = (lead: LeadRow) => {
+    if (typeof window !== "undefined") {
+      window.open(`/admin/leads/${lead.id}`, "_blank");
+    }
+  };
+
+  const closeAiDialog = () => setAiDialogLead(null);
+
+  const bulkUpdate = async (updates: Partial<LeadRow>) => {
     const ids = Array.from(selected);
     if (!ids.length) return;
     await Promise.all(
@@ -167,49 +247,152 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
     await fetchLeads();
   };
 
-  const markRead = async (id: string, isRead: boolean) => {
-    await fetch(`/api/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isRead }),
-    });
-    await fetchLeads();
+  const createTestLead = async () => {
+    if (creatingTestLead) return;
+    setCreatingTestLead(true);
+    try {
+      const payload = {
+        fullName: "Test lead",
+        email: "test.lead@example.com",
+        company: "Demo salon",
+        message: "This is a test lead generated from the admin table.",
+      };
+      const res = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to create test lead");
+      }
+      toast({ title: "Test lead created", description: "It will appear once the list refreshes." });
+      await fetchLeads();
+    } catch (err: any) {
+      toast({
+        title: "Could not create lead",
+        description: err?.message || "Added a local placeholder instead.",
+        variant: "destructive",
+      });
+      setLeads((prev) => [
+        {
+          id: `demo-${Date.now()}`,
+          fullName: "Demo lead",
+          company: "Demo salon",
+          email: "demo@example.com",
+          message: "This is a local demo lead.",
+          leadStatus: "NEW",
+          unread: true,
+          priority: "MEDIUM",
+          activities: [],
+          createdAt: new Date().toISOString(),
+          source: "manual",
+          owner: null,
+        },
+        ...prev,
+      ]);
+    } finally {
+      setCreatingTestLead(false);
+    }
   };
 
-  const updateStatus = async (id: string, status: LeadStatus) => {
-    await fetch(`/api/leads/${id}`, {
+  const updateStatus = async (id: string, leadStatus: LeadStatus) => {
+    const res = await fetch(`/api/leads/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ leadStatus }),
     });
-    await fetchLeads();
+    if (!res.ok) {
+      throw new Error("Failed to update status");
+    }
+    setLeads((prev) => prev.map((lead) => (lead.id === id ? { ...lead, leadStatus } : lead)));
+    return res.json().catch(() => null);
+  };
+
+  const handleStatusChange = async (status: LeadStatus) => {
+    if (!detailLead) return;
+    const originalStatus = detailLead.leadStatus;
+    setDetailLead({ ...detailLead, leadStatus: status });
+    try {
+      await updateStatus(detailLead.id, status);
+      toast({ title: "Status updated", description: statusLabel(status) });
+    } catch (err: any) {
+      setDetailLead((prev) => (prev && prev.id === detailLead.id ? { ...prev, leadStatus: originalStatus } : prev));
+      toast({
+        title: "Unable to update status",
+        description: err?.message || "Try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   const saveNotes = async (id: string, notes: string) => {
-    setSavingNotes(true);
-    await fetch(`/api/leads/${id}`, {
+    const res = await fetch(`/api/leads/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes }),
     });
-    setSavingNotes(false);
+    const data = await res.json().catch(() => null);
+    const updatedNote = data?.data?.notes ?? notes;
+    const updatedAt = data?.data?.updatedAt ?? new Date().toISOString();
+    setDetailLead((prev) => (prev && prev.id === id ? { ...prev, notes: updatedNote, updatedAt } : prev));
     await fetchLeads();
   };
 
+  useEffect(() => {
+    if (!detailLead) return;
+    if (notesTimer.current) clearTimeout(notesTimer.current);
+    notesTimer.current = setTimeout(async () => {
+      setSavingNotes(true);
+      setNotesSaved(false);
+      await saveNotes(detailLead.id, detailLead.notes ?? "");
+      setSavingNotes(false);
+      setNotesSaved(true);
+      setTimeout(() => setNotesSaved(false), 1500);
+    }, 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailLead?.notes, detailLead?.id]);
+
+  useEffect(() => {
+    if (!detailLead || !detailLead.unread) return;
+    let canceled = false;
+
+    const markOpenLeadAsRead = async () => {
+      try {
+        await fetch(`/api/leads/${detailLead.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ unread: false }),
+        });
+        if (canceled) return;
+        setDetailLead((prev) => (prev && prev.id === detailLead.id ? { ...prev, unread: false } : prev));
+        setLeads((prev) => prev.map((l) => (l.id === detailLead.id ? { ...l, unread: false } : l)));
+      } catch (err) {
+        console.error("Failed to mark lead as read", err);
+      }
+    };
+
+    markOpenLeadAsRead();
+
+    return () => {
+      canceled = true;
+    };
+  }, [detailLead]);
+
   const statusCounts = useMemo(() => {
-    const counts: Record<LeadStatus, number> = {
-      NEW: 0,
-      CONTACTED: 0,
-      CALL_BOOKED: 0,
-      PROPOSAL_SENT: 0,
-      WON: 0,
-      LOST: 0,
-    } as Record<LeadStatus, number>;
+    const counts: Partial<Record<LeadStatus, number>> = {};
     leads.forEach((l) => {
-      counts[l.status] = (counts[l.status] || 0) + 1;
+      counts[l.leadStatus] = (counts[l.leadStatus] ?? 0) + 1;
     });
     return counts;
   }, [leads]);
+
+  const handleClearFilters = () => {
+    setStatusFilter("ALL");
+    setUnreadOnly(false);
+    setQuickView("ALL");
+    setSearchQuery("");
+    clearSavedFilter();
+  };
 
   return (
     <section className="space-y-6">
@@ -224,9 +407,11 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
         </Button>
       </div>
 
-      {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card
+          className="cursor-pointer transition hover:shadow-md"
+          onClick={() => setStatusFilter((prev) => (prev === "NEW" ? "ALL" : "NEW"))}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-slate-500">New leads</CardTitle>
           </CardHeader>
@@ -235,38 +420,56 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
             <p className="text-xs text-slate-500">Awaiting response</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition hover:shadow-md"
+          onClick={() => setStatusFilter((prev) => (prev === "IN_PROGRESS" ? "ALL" : "IN_PROGRESS"))}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm text-slate-500">In progress</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold text-slate-900">
-              {(statusCounts.CONTACTED ?? 0) + (statusCounts.CALL_BOOKED ?? 0) + (statusCounts.PROPOSAL_SENT ?? 0)}
+              {(statusCounts.IN_PROGRESS ?? 0) + (statusCounts.APPOINTMENT_SCHEDULED ?? 0)}
             </p>
-            <p className="text-xs text-slate-500">Contacted / Calls / Proposals</p>
+            <p className="text-xs text-slate-500">Discovery & scheduling</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition hover:shadow-md"
+          onClick={() => setStatusFilter((prev) => (prev === "QUALIFIED_TO_BUY" ? "ALL" : "QUALIFIED_TO_BUY"))}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-500">Won</CardTitle>
+            <CardTitle className="text-sm text-slate-500">Qualified to buy</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-slate-900">{statusCounts.WON ?? 0}</p>
-            <p className="text-xs text-slate-500">Closed deals</p>
+            <p className="text-3xl font-semibold text-slate-900">{statusCounts.QUALIFIED_TO_BUY ?? 0}</p>
+            <p className="text-xs text-slate-500">Ready for pricing</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          className="cursor-pointer transition hover:shadow-md"
+          onClick={() => setStatusFilter((prev) => (prev === "NOT_A_FIT" ? "ALL" : "NOT_A_FIT"))}
+        >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-slate-500">Total leads</CardTitle>
+            <CardTitle className="text-sm text-slate-500">Not a fit</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold text-slate-900">{leads.length}</p>
-            <p className="text-xs text-slate-500">All time</p>
+            <p className="text-3xl font-semibold text-slate-900">{statusCounts.NOT_A_FIT ?? 0}</p>
+            <p className="text-xs text-slate-500">Closed / disqualified</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
+      <LeadQuickViews
+        quickView={quickView}
+        onSelectQuickView={(key) => {
+          clearSavedFilter();
+          setQuickView(key);
+        }}
+        savedFilter={savedFilter}
+        onApplySavedFilter={toggleSavedFilter}
+      />
+
       <Card>
         <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between py-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -277,7 +480,10 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
             <select
               className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "ALL")}
+              onChange={(e) => {
+                clearSavedFilter();
+                setStatusFilter(e.target.value as LeadStatus | "ALL");
+              }}
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -285,131 +491,263 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
                 </option>
               ))}
             </select>
+            <Button
+              variant={statusFilter === "NEW" ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                clearSavedFilter();
+                setStatusFilter((prev) => (prev === "NEW" ? "ALL" : "NEW"));
+              }}
+            >
+              New leads
+            </Button>
             <label className="flex items-center gap-2 text-sm text-slate-700">
-              <Checkbox checked={unreadOnly} onChange={(e) => setUnreadOnly(e.target.checked)} />
+              <Checkbox
+                checked={unreadOnly}
+                onChange={(e) => {
+                  clearSavedFilter();
+                  setUnreadOnly(e.target.checked);
+                }}
+              />
               Unread only
             </label>
-            <Button variant="ghost" size="sm" onClick={() => { setStatusFilter("ALL"); setUnreadOnly(false); setSearch(""); fetchLeads(); }}>
-              Reset filters
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+            >
+              Clear all
             </Button>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <Input
               placeholder="Search leads"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full md:w-64"
+              ref={searchInputRef}
             />
-            <Button variant="outline" size="sm" onClick={fetchLeads}>Search</Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Bulk actions */}
       {selected.size > 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-wrap items-center gap-3 py-3 text-sm text-slate-700">
             <span className="font-semibold">{selected.size} selected</span>
-            <Button variant="outline" size="sm" onClick={() => bulkUpdate({ isRead: true })}>Mark as read</Button>
-            <Button variant="outline" size="sm" onClick={() => bulkUpdate({ isRead: false })}>Mark as unread</Button>
+            <Button variant="outline" size="sm" onClick={() => bulkUpdate({ unread: false })}>
+              Mark as read
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => bulkUpdate({ unread: true })}>
+              Mark as unread
+            </Button>
             <div className="flex items-center gap-2">
               <span>Status:</span>
               <select
                 className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm"
                 onChange={(e) => {
                   const val = e.target.value as LeadStatus;
-                  if (val) bulkUpdate({ status: val });
+                  if (val) bulkUpdate({ leadStatus: val } as Partial<LeadRow>);
                 }}
                 defaultValue=""
               >
                 <option value="">Choose</option>
                 {statusOptions.filter((s) => s.value !== "ALL").map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
                 ))}
               </select>
             </div>
-            <Button variant="outline" size="sm" onClick={bulkDelete}>Delete selected</Button>
+            <Button variant="outline" size="sm" onClick={bulkDelete}>
+              Delete selected
+            </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-xl border border-slate-100 shadow-sm">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="px-4 py-3 text-left">
-                <Checkbox
-                  checked={selected.size > 0 && selected.size === paginatedLeads.length}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    const ids = paginatedLeads.map((l) => l.id);
-                    setSelected((prev) => {
-                      const next = new Set(prev);
-                      ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
-                      return next;
+      <div className="rounded-xl border border-slate-100 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <p className="text-xs uppercase tracking-wide text-slate-500">Leads</p>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex items-center gap-1 text-slate-600">
+                <Columns className="h-4 w-4" />
+                <span>Columns</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Show columns</DropdownMenuLabel>
+              <DropdownMenuCheckboxItem checked={showOwnerColumn} onCheckedChange={(value) => setShowOwnerColumn(Boolean(value))}>
+                Owner
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={showValueColumn} onCheckedChange={(value) => setShowValueColumn(Boolean(value))}>
+                Value
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="overflow-hidden rounded-b-xl">
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-fixed text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 text-left">
+                    <Checkbox
+                      checked={selected.size > 0 && selected.size === paginatedLeads.length}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        const ids = paginatedLeads.map((l) => l.id);
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          ids.forEach((id) => (checked ? next.add(id) : next.delete(id)));
+                          return next;
+                        });
+                      }}
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left">Name</th>
+                  <th className="px-4 py-3 text-left hidden md:table-cell">Source</th>
+                  <th className="px-4 py-3 text-left whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-left hidden md:table-cell whitespace-nowrap">Last activity</th>
+                  {showOwnerColumn && <th className="px-4 py-3 text-left hidden lg:table-cell">Owner</th>}
+                  {showValueColumn && (
+                    <th className="px-4 py-3 text-right hidden lg:table-cell whitespace-nowrap">Value</th>
+                  )}
+                  <th className="px-4 py-3 text-right hidden lg:table-cell whitespace-nowrap">Created</th>
+                  <th className="px-4 py-3 text-right whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading && (
+                  <tr>
+                    <td colSpan={totalColumnCount} className="px-4 py-6 text-center text-slate-600">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                    </td>
+                  </tr>
+                )}
+                {!loading && error && (
+                  <tr>
+                    <td colSpan={totalColumnCount} className="px-4 py-6 text-center text-rose-600">
+                      {error}
+                    </td>
+                  </tr>
+                )}
+                {!loading && !error && filteredLeads.length === 0 && (
+                  <tr>
+                    <td colSpan={totalColumnCount} className="px-4 py-8 text-center text-slate-600">
+                      <div className="space-y-3 text-center">
+                        <p className="text-sm font-semibold text-slate-800">No leads yet</p>
+                        <p className="text-sm text-slate-600">
+                          Leads from your Contact, Estimate and Audit forms will appear here automatically.
+                        </p>
+                        <div className="flex justify-center">
+                          <Button size="sm" onClick={createTestLead} variant="default" disabled={creatingTestLead}>
+                            {creatingTestLead ? "Creating..." : "Create test lead"}
+                          </Button>
+                        </div>
+                        <div className="space-y-2 text-sm text-slate-600">
+                          {["Contact form connected", "Estimate funnel active", "Audit page live"].map((item) => (
+                            <div key={item} className="flex items-center justify-center gap-2">
+                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px]">
+                                ✓
+                              </span>
+                              <span>{item}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!loading &&
+                  !error &&
+                  paginatedLeads.map((lead) => {
+                    const lastActivity = formatRelativeTime({
+                      lastActivityAt: lead.lastActivityAt,
+                      updatedAt: lead.updatedAt,
+                      createdAt: lead.createdAt,
                     });
-                  }}
-                />
-              </th>
-              <th className="px-4 py-3 text-left">Name</th>
-              <th className="px-4 py-3 text-left">Salon</th>
-              <th className="px-4 py-3 text-left">Email</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              <th className="px-4 py-3 text-right">Created</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {loading && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-600">
-                  <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                </td>
-              </tr>
-            )}
-            {!loading && error && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-rose-600">{error}</td>
-              </tr>
-            )}
-            {!loading && !error && paginatedLeads.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-600">No leads found.</td>
-              </tr>
-            )}
-            {!loading && !error && paginatedLeads.map((lead) => (
-              <tr
-                key={lead.id}
-                className={`hover:bg-slate-50 cursor-pointer ${lead.isRead ? "text-slate-600" : "text-slate-900"}`}
-                onClick={() => setDetailLead(lead)}
-              >
-                <td className="px-4 py-3">
-                  <Checkbox
-                    checked={selected.has(lead.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      toggleSelect(lead.id);
-                    }}
-                  />
-                </td>
-                <td className="px-4 py-3 font-semibold truncate">
-                  <span className={!lead.isRead ? "font-semibold" : "font-medium"}>{lead.name}</span>
-                </td>
-                <td className="px-4 py-3 text-slate-700 truncate">{lead.salonName}</td>
-                <td className="px-4 py-3 text-slate-700 truncate">{lead.email}</td>
-                <td className="px-4 py-3">
-                  <Badge className={statusBadgeColor(lead.status)}>{statusLabel(lead.status)}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right text-slate-500">
-                  {formatDate(lead.createdAt)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    const budgetBadge = getBudgetBadge(lead.value ?? lead.score ?? undefined);
+                    const isOverdue = isOverdueLead(lead);
+                    const hasReply = hasReplyActivity(lead);
+                    return (
+                      <tr
+                        key={lead.id}
+                        className={`cursor-pointer transition hover:bg-slate-50 ${selected.has(lead.id) ? "bg-pink-50" : ""} ${
+                          lead.unread ? "text-slate-900" : "text-slate-600"
+                        }`}
+                        onClick={() => handleOpenLead(lead)}
+                      >
+                        <td className="px-4 py-3">
+                          <Checkbox
+                            checked={selected.has(lead.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleSelect(lead.id);
+                            }}
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              {lead.unread && <span className="h-2 w-2 rounded-full bg-pink-500" />}
+                              <button
+                                type="button"
+                                className={`text-left text-sm ${lead.unread ? "font-semibold text-slate-900" : "font-medium text-slate-800"} truncate`}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenLead(lead);
+                                }}
+                              >
+                                {lead.fullName}
+                              </button>
+                              {isOverdue && <Badge className="text-[11px]">Overdue</Badge>}
+                            </div>
+                            {lead.company && <p className="text-xs text-slate-500 truncate">{lead.company}</p>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 hidden md:table-cell truncate">
+                          {getLeadSourceLabel(lead.source)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Badge className={statusBadgeColor(lead.leadStatus)}>{statusLabel(lead.leadStatus)}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 hidden md:table-cell whitespace-nowrap" title={lastActivity.title}>
+                          <span className="text-sm text-slate-600">{lastActivity.label}</span>
+                        </td>
+                        {showOwnerColumn && (
+                          <td className="px-4 py-3 text-slate-700 hidden lg:table-cell truncate">
+                            {lead.owner ?? "Unassigned"}
+                          </td>
+                        )}
+                        {showValueColumn && (
+                          <td className="px-4 py-3 text-right hidden lg:table-cell whitespace-nowrap">
+                            <Badge variant={budgetBadge.variant}>{budgetBadge.label}</Badge>
+                          </td>
+                        )}
+                        <td className="px-4 py-3 text-right hidden lg:table-cell whitespace-nowrap text-slate-500">
+                          {formatDate(lead.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">
+                          <LeadRowActions
+                            leadId={lead.id}
+                            leadPhone={lead.phone}
+                            onOpen={() => handleOpenLead(lead)}
+                            onReply={() => handleReplyLead(lead)}
+                            showDraft={!hasReply}
+                            onDraft={() => handleDraftReply(lead)}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-slate-700">
         <span>
           Page {currentPage} of {totalPages}
@@ -434,120 +772,22 @@ export function LeadsTable({ initialLeads }: LeadsTableProps) {
         </div>
       </div>
 
-      {/* Detail drawer */}
-      <Sheet open={!!detailLead} onOpenChange={(open) => !open && setDetailLead(null)}>
-        {detailLead && (
-          <SheetContent className="w-full max-w-xl" aria-label="Lead detail">
-              <SheetHeader className="space-y-1">
-                <SheetTitle className="text-xl">{detailLead.name}</SheetTitle>
-                <p className="text-sm text-slate-600">{detailLead.salonName}</p>
-                <p className="text-xs text-slate-500">
-                  {new Date(detailLead.createdAt).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </SheetHeader>
-            <div className="mt-6 space-y-6">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900">Status</p>
-                <select
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
-                  value={detailLead.status}
-                  onChange={async (e) => {
-                    const val = e.target.value as LeadStatus;
-                    await updateStatus(detailLead.id, val);
-                    setDetailLead({ ...detailLead, status: val });
-                  }}
-                >
-                  {statusOptions.filter((s) => s.value !== "ALL").map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <Checkbox
-                    checked={detailLead.isRead}
-                    onChange={async (e) => {
-                      await markRead(detailLead.id, e.target.checked);
-                      setDetailLead({ ...detailLead, isRead: e.target.checked });
-                    }}
-                  />
-                  Mark as read
-                </label>
-              </div>
+      <LeadDetailDrawer
+        lead={detailLead}
+        open={!!detailLead}
+        onClose={() => setDetailLead(null)}
+        onStatusChange={handleStatusChange}
+        savingNotes={savingNotes}
+        notesSaved={notesSaved}
+        onNotesChange={(value) => detailLead && setDetailLead({ ...detailLead, notes: value })}
+        onLogActivity={handleLogActivity}
+        onEmail={handleEmailAction}
+        onCall={handleCallAction}
+        onAddNote={handleAddNoteAction}
+        onAddTask={handleAddTaskAction}
+      />
 
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900">Contact info</p>
-                <div className="text-sm text-slate-700 space-y-1">
-                  <p>
-                    Email: <a className="text-blush-700" href={`mailto:${detailLead.email}`}>{detailLead.email}</a>
-                  </p>
-                  {detailLead.website && (
-                    <p>
-                      Website: <a className="text-blush-700" href={detailLead.website} target="_blank" rel="noreferrer">{detailLead.website}</a>
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900">Message</p>
-                <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-line max-h-40 overflow-auto">
-                  {detailLead.message}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-slate-900">Internal notes</p>
-                <Textarea
-                  value={detailLead.notes ?? ""}
-                  onChange={(e) => setDetailLead({ ...detailLead, notes: e.target.value })}
-                  rows={4}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={savingNotes}
-                  onClick={async () => {
-                    await saveNotes(detailLead.id, detailLead.notes ?? "");
-                  }}
-                >
-                  {savingNotes ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save notes"}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    const next = !detailLead.isRead;
-                    await markRead(detailLead.id, next);
-                    setDetailLead({ ...detailLead, isRead: next });
-                  }}
-                >
-                  {detailLead.isRead ? "Mark as unread" : "Mark as read"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={async () => {
-                    await fetch(`/api/leads/${detailLead.id}`, { method: "DELETE" });
-                    setDetailLead(null);
-                    await fetchLeads();
-                  }}
-                >
-                  Delete lead
-                </Button>
-              </div>
-            </div>
-          </SheetContent>
-        )}
-      </Sheet>
+      <LeadAiReplyDialog lead={aiDialogLead} open={!!aiDialogLead} onClose={closeAiDialog} />
     </section>
   );
 }

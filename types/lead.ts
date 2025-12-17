@@ -1,0 +1,49 @@
+import type { LeadPriority, LeadStatus, MeetingType } from "@prisma/client";
+
+export type LeadActivityRow = {
+  id: string;
+  type: string;
+  message: string;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type LeadRow = {
+  id: string;
+  fullName: string;
+  company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  source?: string | null;
+  owner?: string | null;
+  leadStatus: LeadStatus;
+  unread: boolean;
+  notes?: string | null;
+  message?: string;
+  priority: LeadPriority;
+  leadScore?: number | null;
+  score?: number | null;
+  aiSummary?: string | null;
+  activities: LeadActivityRow[];
+  createdAt: string;
+  updatedAt?: string | null;
+  lastActivityAt?: string | null;
+  value?: number | null;
+  budgetRange?: string | null;
+  serviceInterest?: string | null;
+  targetDeadline?: string | null;
+  meetingAt?: string | null;
+  meetingType?: MeetingType | null;
+  meetingLink?: string | null;
+  decisionMaker?: string | null;
+  qualificationNotes?: string | null;
+  decisionCriteriaNotes?: string | null;
+  decisionProcessNotes?: string | null;
+  paperProcessNotes?: string | null;
+  competitionNotes?: string | null;
+  mustHaveFeatures?: string[] | null;
+  referenceSites?: { url: string; note?: string }[] | null;
+  nextFollowUpAt?: string | null;
+  repliedAt?: string | null;
+};

@@ -15,6 +15,7 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [salonName, setSalonName] = useState("");
+  const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,13 +24,22 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
     event.preventDefault();
     const trimmedName = name.trim();
     const trimmedSalonName = salonName.trim();
+    const trimmedEmail = email.trim();
     const trimmedWebsite = website.trim();
     const trimmedMessage = message.trim();
 
-    if (!trimmedName || !trimmedSalonName || !trimmedMessage) {
+    if (!trimmedName || !trimmedSalonName || !trimmedEmail || !trimmedMessage) {
       toast({
         title: "Missing details",
-        description: "Name, salon name and message are required.",
+        description: "Name, salon name, email and message are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (trimmedMessage.length < 10) {
+      toast({
+        title: "Message is too short",
+        description: "Please add at least 10 characters so I can help.",
         variant: "destructive",
       });
       return;
@@ -41,20 +51,24 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: trimmedName,
-          salonName: trimmedSalonName,
+          fullName: trimmedName,
+          company: trimmedSalonName,
+          email: trimmedEmail,
           website: trimmedWebsite || undefined,
           message: trimmedMessage,
+          source: "contact_page",
         }),
       });
 
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(payload?.error || "Failed to send your message.");
+        const detail = extractErrorDetail(payload);
+        throw new Error(detail);
       }
 
       setName("");
       setSalonName("");
+      setEmail("");
       setWebsite("");
       setMessage("");
       toast({ title: "Thanks!", description: "I’ll reply to you soon." });
@@ -70,6 +84,24 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
     }
   };
 
+  function extractErrorDetail(payload: Record<string, any>) {
+    if (!payload) return "Failed to send your message.";
+    if (payload?.details) {
+      const { formErrors, fieldErrors } = payload.details;
+      if (Array.isArray(formErrors) && formErrors.length) return String(formErrors[0]);
+      if (fieldErrors && typeof fieldErrors === "object") {
+        const messages = Object.values(fieldErrors)
+          .flat()
+          .filter((value) => typeof value === "string" && value.length > 0)
+          .map(String);
+        if (messages.length) return messages[0];
+      }
+    }
+    if (typeof payload.error === "string" && payload.error.length) return payload.error;
+    if (payload?.error?.message) return String(payload.error.message);
+    return "Failed to send your message.";
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="grid gap-4 md:grid-cols-2">
@@ -80,6 +112,17 @@ export function ContactForm({ onSuccess }: ContactFormProps) {
             name="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email">Email *</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
             required
           />
         </div>

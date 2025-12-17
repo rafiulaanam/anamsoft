@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ProjectStatus } from "@prisma/client";
+
 function slugify(value: string) {
   const base = value
     .toLowerCase()
@@ -8,15 +10,32 @@ function slugify(value: string) {
   return `${base}-${suffix}`;
 }
 
+function normalizeTechStack(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean);
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function parseDate(value: unknown) {
+  if (!value) return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+const projectStatuses = new Set(Object.values(ProjectStatus));
+
 export async function GET() {
   try {
     const { prisma } = await import("@/lib/db");
-    if (!(prisma as any).project?.findMany) {
-      return NextResponse.json({ data: [] }, { status: 200 });
-    }
     const projects = await prisma.project.findMany({
       orderBy: { createdAt: "desc" },
-      include: { client: true },
     });
     return NextResponse.json({ data: projects });
   } catch (error) {
@@ -29,28 +48,32 @@ export async function POST(req: NextRequest) {
   try {
     const { prisma } = await import("@/lib/db");
     const body = await req.json();
-    const name = body?.name as string | undefined;
-    const clientId = body?.clientId as string | undefined;
-    if (!name || !clientId) {
-      return NextResponse.json({ error: "Name and clientId are required." }, { status: 400 });
+    const name = typeof body?.name === "string" ? body.name.trim() : "";
+    if (!name) {
+      return NextResponse.json({ error: "Name is required." }, { status: 400 });
     }
 
-    const slug = slugify(name);
+    const slug = typeof body?.slug === "string" && body.slug.trim() ? slugify(body.slug) : slugify(name);
+    const status = typeof body?.status === "string" && projectStatuses.has(body.status as ProjectStatus)
+      ? (body.status as ProjectStatus)
+      : "PLANNING";
+    const techStack = normalizeTechStack(body?.techStack);
 
     const project = await prisma.project.create({
       data: {
         name,
         slug,
-        clientId,
-        summary: body?.summary ?? null,
-        type: body?.type ?? null,
-        status: body?.status ?? undefined,
-        startDate: body?.startDate ? new Date(body.startDate) : null,
-        dueDate: body?.dueDate ? new Date(body.dueDate) : null,
-        sourceType: body?.sourceType ?? "MANUAL",
-        sourceId: body?.sourceId ?? null,
+        clientName: typeof body?.clientName === "string" ? body.clientName.trim() || null : null,
+        clientEmail: typeof body?.clientEmail === "string" ? body.clientEmail.trim() || null : null,
+        status,
+        scopeSummary: typeof body?.scopeSummary === "string" ? body.scopeSummary : "",
+        techStack,
+        repoUrl: typeof body?.repoUrl === "string" ? body.repoUrl || null : null,
+        stagingUrl: typeof body?.stagingUrl === "string" ? body.stagingUrl || null : null,
+        productionUrl: typeof body?.productionUrl === "string" ? body.productionUrl || null : null,
+        startDate: parseDate(body?.startDate),
+        deadline: parseDate(body?.deadline),
       },
-      include: { client: true },
     });
 
     return NextResponse.json({ data: project }, { status: 201 });
