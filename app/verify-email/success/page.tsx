@@ -6,13 +6,16 @@ import { CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 
+const VERIFIED_SUCCESS_URL =
+  process.env.NEXT_PUBLIC_VERIFIED_SUCCESS_URL ?? "/login?verified=1";
+
 export default function VerifyEmailSuccessPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      window.location.href = "/login?verified=1";
+      window.location.href = VERIFIED_SUCCESS_URL;
     }, 2000);
     return () => clearTimeout(timer);
   }, []);
@@ -31,7 +34,7 @@ export default function VerifyEmailSuccessPage() {
             <CheckCircle2 className="h-6 w-6" />
           </div>
           <p className="text-xs text-slate-500">
-            Not redirected? <Link href="/login?verified=1" className="text-pink-600 hover:text-pink-700">Go to login</Link>
+            Not redirected? <Link href={VERIFIED_SUCCESS_URL} className="text-pink-600 hover:text-pink-700">Go to login</Link>
           </p>
         </CardContent>
       </Card>

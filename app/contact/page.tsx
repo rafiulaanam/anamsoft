@@ -3,10 +3,25 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, Mail, MapPin, ArrowRight, Send } from "lucide-react";
-import { ContactForm } from "@/components/contact/contact-form";
+import { LeadCaptureForm } from "@/components/sections/lead-capture-form";
+import type { Service } from "@prisma/client";
 import { Navbar } from "@/components/navbar";
+import { getSiteConfig, getPublishedServices } from "@/lib/content/public";
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const siteConfig = await getSiteConfig();
+  let services: Service[] = [];
+  try {
+    services = await getPublishedServices();
+  } catch (error) {
+    console.error("Failed to load services for contact page", error);
+  }
+
+  const serviceOptions = services.map((service) => ({ id: service.id, label: service.title }));
+  const email = siteConfig?.email ?? "hello@anamsoft.com";
+  const whatsapp = siteConfig?.whatsapp ?? "+37061104553";
+  const whatsappHref = `https://wa.me/${whatsapp.replace(/\D/g, "")}`;
+
   return (
     <main className="min-h-screen bg-muted/30">
       <Navbar />
@@ -37,8 +52,8 @@ export default function ContactPage() {
                   <Mail className="h-5 w-5 text-blush-600" />
                   <div>
                     <p className="font-semibold text-slate-900">Email</p>
-                    <a href="mailto:hello@anamsoft.com" className="text-blush-700 hover:underline">
-                      hello@anamsoft.com
+                    <a href={`mailto:${email}`} className="text-blush-700 hover:underline">
+                      {email}
                     </a>
                   </div>
                 </div>
@@ -46,8 +61,8 @@ export default function ContactPage() {
                   <Phone className="h-5 w-5 text-blush-600" />
                   <div>
                     <p className="font-semibold text-slate-900">Call / WhatsApp</p>
-                    <a href="tel:+37061104553" className="text-blush-700 hover:underline">
-                      +37061104553
+                    <a href={whatsappHref} className="text-blush-700 hover:underline">
+                      {whatsapp}
                     </a>
                   </div>
                 </div>
@@ -101,7 +116,11 @@ export default function ContactPage() {
               <CardDescription>Share a few details and I’ll reply within 24 hours.</CardDescription>
             </CardHeader>
             <CardContent className="p-0 pt-4">
-              <ContactForm />
+              <LeadCaptureForm
+                serviceOptions={serviceOptions}
+                source="contact_page"
+                submitLabel="Send project details"
+              />
             </CardContent>
           </Card>
         </section>

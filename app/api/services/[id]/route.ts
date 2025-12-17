@@ -1,15 +1,21 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+const toNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return undefined;
+};
+
 function notFound() {
   return NextResponse.json({ error: "Service not found" }, { status: 404 });
 }
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    if (!(prisma as any)?.service) {
-      throw new Error("Service model unavailable");
-    }
     const service = await prisma.service.findUnique({ where: { id: params.id } });
     if (!service) return notFound();
     return NextResponse.json({ data: service });
@@ -21,23 +27,47 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    if (!(prisma as any)?.service) {
-      throw new Error("Service model unavailable");
-    }
     const existing = await prisma.service.findUnique({ where: { id: params.id } });
     if (!existing) return notFound();
 
     const body = await req.json();
-    const { name, description, priceFrom, isFeatured, slug } = body ?? {};
+    const {
+      title,
+      slug,
+      shortDescription,
+      description,
+      icon,
+      imageUrl,
+      startingPrice,
+      currency,
+      deliveryDaysMin,
+      deliveryDaysMax,
+      isActive,
+      sortOrder,
+      metaTitle,
+      metaDescription,
+      ogImageUrl,
+    } = body ?? {};
 
     const updated = await prisma.service.update({
       where: { id: params.id },
       data: {
-        name: name ?? existing.name,
-        description: description ?? existing.description,
-        priceFrom: priceFrom ?? existing.priceFrom,
-        isFeatured: typeof isFeatured === "boolean" ? isFeatured : existing.isFeatured,
+        title: title ?? existing.title,
         slug: slug ?? existing.slug,
+        shortDescription: shortDescription ?? existing.shortDescription,
+        description: description ?? existing.description,
+        icon: icon ?? existing.icon,
+        imageUrl: imageUrl ?? existing.imageUrl,
+        startingPrice:
+          toNumber(startingPrice) ?? existing.startingPrice ?? null,
+        currency: currency ?? existing.currency,
+        deliveryDaysMin: toNumber(deliveryDaysMin) ?? existing.deliveryDaysMin,
+        deliveryDaysMax: toNumber(deliveryDaysMax) ?? existing.deliveryDaysMax,
+        isActive: typeof isActive === "boolean" ? isActive : existing.isActive,
+        sortOrder: toNumber(sortOrder) ?? existing.sortOrder,
+        metaTitle: metaTitle ?? existing.metaTitle,
+        metaDescription: metaDescription ?? existing.metaDescription,
+        ogImageUrl: ogImageUrl ?? existing.ogImageUrl,
       },
     });
 
@@ -53,9 +83,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    if (!(prisma as any)?.service) {
-      throw new Error("Service model unavailable");
-    }
     const existing = await prisma.service.findUnique({ where: { id: params.id } });
     if (!existing) return notFound();
 

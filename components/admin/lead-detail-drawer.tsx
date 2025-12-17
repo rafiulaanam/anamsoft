@@ -61,23 +61,23 @@ function InfoRow({ label, value, subtitle, link, copyValue }: InfoRowProps) {
     navigator.clipboard?.writeText(copyValue);
   };
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50/80 px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-slate-50/80 px-4 py-3 min-w-0">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
         {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
       </div>
-      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 min-w-0">
         {link ? (
           <a
             href={link}
             target="_blank"
             rel="noreferrer"
-            className="max-w-[180px] truncate text-right text-slate-700 transition-colors hover:text-slate-900"
+            className="max-w-[220px] truncate text-right text-slate-700 transition-colors hover:text-slate-900"
           >
             {value}
           </a>
         ) : (
-          <span className="max-w-[180px] truncate text-right">{value}</span>
+          <span className="max-w-[220px] truncate text-right break-words">{value}</span>
         )}
         {copyValue && (
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-800" onClick={handleCopy}>
@@ -96,7 +96,7 @@ type SectionCardProps = {
 
 function SectionCard({ title, children }: SectionCardProps) {
   return (
-    <section className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_15px_45px_-25px_rgba(15,23,42,0.8)]">
+    <section className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_15px_45px_-25px_rgba(15,23,42,0.8)] min-w-0">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
       <div className="space-y-3">{children}</div>
     </section>
@@ -221,7 +221,7 @@ export function LeadDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
-      <SheetContent className="flex h-full w-full max-w-none min-w-[360px] flex-col overflow-hidden pb-0 sm:max-w-[92vw] md:max-w-[560px] lg:max-w-[640px] bg-white shadow-2xl">
+      <SheetContent className="flex h-[100dvh] max-h-[100dvh] w-full min-w-[320px] flex-col overflow-hidden pb-0 sm:max-w-[92vw] md:max-w-[720px] lg:max-w-[820px] xl:max-w-[900px] 2xl:max-w-[1020px] bg-white shadow-2xl">
         <div className="sticky top-0 z-20 border-b border-slate-100 bg-white/90 px-4 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -263,7 +263,7 @@ export function LeadDetailDrawer({
             />
           </div>
         </div>
-        <ScrollArea className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-5">
+        <ScrollArea className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-5">
           <div className="space-y-6">
             <SectionCard title="Next action">
               <div className="grid gap-4 sm:grid-cols-2">

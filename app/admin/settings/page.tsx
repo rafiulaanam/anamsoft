@@ -14,19 +14,13 @@ interface SiteConfig {
   heroSubtitle: string;
   email: string;
   whatsapp?: string | null;
+  heroPrimaryCtaLabel?: string | null;
+  heroPrimaryCtaLink?: string | null;
+  heroSecondaryCtaLabel?: string | null;
+  heroSecondaryCtaLink?: string | null;
 }
 
 export default function AdminSettingsPage() {
-  if (typeof window === "undefined") {
-    return (
-      <div className="space-y-6 max-w-3xl">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
-          <p className="text-sm text-slate-600">Loading…</p>
-        </div>
-      </div>
-    );
-  }
   const [config, setConfig] = useState<SiteConfig | null>(null);
   const [form, setForm] = useState<Partial<SiteConfig>>({});
   const [loading, setLoading] = useState(true);
@@ -43,7 +37,7 @@ export default function AdminSettingsPage() {
         if (!res.ok) throw new Error("Failed to load settings");
         const data = await res.json();
         setConfig(data.data);
-        setForm(data.data ?? {});
+    setForm(data.data ?? {});
       } catch (err: any) {
         setError(err?.message || "Failed to load settings");
       } finally {
@@ -69,6 +63,10 @@ export default function AdminSettingsPage() {
           heroSubtitle: form.heroSubtitle,
           email: form.email,
           whatsapp: form.whatsapp,
+          heroPrimaryCtaLabel: form.heroPrimaryCtaLabel,
+          heroPrimaryCtaLink: form.heroPrimaryCtaLink,
+          heroSecondaryCtaLabel: form.heroSecondaryCtaLabel,
+          heroSecondaryCtaLink: form.heroSecondaryCtaLink,
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -112,6 +110,38 @@ export default function AdminSettingsPage() {
               id="heroSubtitle"
               value={form.heroSubtitle ?? ""}
               onChange={(e) => setForm({ ...form, heroSubtitle: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="heroPrimaryCtaLabel">Primary CTA label</Label>
+            <Input
+              id="heroPrimaryCtaLabel"
+              value={form.heroPrimaryCtaLabel ?? ""}
+              onChange={(e) => setForm({ ...form, heroPrimaryCtaLabel: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="heroPrimaryCtaLink">Primary CTA link</Label>
+            <Input
+              id="heroPrimaryCtaLink"
+              value={form.heroPrimaryCtaLink ?? ""}
+              onChange={(e) => setForm({ ...form, heroPrimaryCtaLink: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="heroSecondaryCtaLabel">Secondary CTA label</Label>
+            <Input
+              id="heroSecondaryCtaLabel"
+              value={form.heroSecondaryCtaLabel ?? ""}
+              onChange={(e) => setForm({ ...form, heroSecondaryCtaLabel: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="heroSecondaryCtaLink">Secondary CTA link</Label>
+            <Input
+              id="heroSecondaryCtaLink"
+              value={form.heroSecondaryCtaLink ?? ""}
+              onChange={(e) => setForm({ ...form, heroSecondaryCtaLink: e.target.value })}
             />
           </div>
           <div className="space-y-2">

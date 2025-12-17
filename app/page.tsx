@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -16,8 +16,14 @@ import { PricingSection } from "@/components/sections/pricing-section";
 import { ProjectEstimatorWizard } from "@/components/sections/project-estimator-wizard";
 import { ConsultationBookingSection } from "@/components/sections/consultation-booking-section";
 import { ScrollArea, ScrollBar, ScrollAreaViewport } from "@/components/ui/scroll-area";
-import type { PortfolioItem } from "@prisma/client";
-import { getPublishedFaqs, getPublishedTestimonials } from "@/lib/content/public";
+import type { PortfolioItem, Service } from "@prisma/client";
+import {
+  getSiteConfig,
+  getPublishedServices,
+  getPublishedPortfolioItems,
+  getPublishedTestimonials,
+  getPublishedFaqs,
+} from "@/lib/content/public";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,18 +52,50 @@ const steps = [
   },
 ];
 
+const HERO_FALLBACK = {
+  title: "Modern salon websites that book more clients",
+  subtitle:
+    "Mobile-first websites for beauty salons, nail & hair studios, and spas that highlight your services, show availability, and turn visitors into appointments.",
+  primaryLabel: "Get a 2-minute estimate",
+  primaryLink: "#estimate",
+  secondaryLabel: "Book a 20-min consultation",
+  secondaryLink: "#consultation",
+};
+
+const formatCurrency = (value: number | null | undefined, currency = "EUR") => {
+  if (value == null) {
+    return "Custom quote";
+  }
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
 export default async function HomePage() {
   const year = new Date().getFullYear();
 
-  const siteConfig = (await prisma.siteConfig.findFirst()) ?? null;
+  let siteConfig = null;
+  try {
+    siteConfig = await getSiteConfig();
+  } catch (error) {
+    console.error("Failed to load site config", error);
+  }
+
   const email = siteConfig?.email ?? "hello@anamsoft.com";
   const whatsapp = siteConfig?.whatsapp ?? "+37061104553";
+
+  let services: Service[] = [];
+  try {
+    services = await getPublishedServices();
+  } catch (error) {
+    console.error("Failed to load services", error);
+  }
+
   let portfolioItems: PortfolioItem[] = [];
   try {
-    portfolioItems = await prisma.portfolioItem.findMany({
-      where: { isPublished: true },
-      orderBy: { createdAt: "desc" },
-    });
+    portfolioItems = await getPublishedPortfolioItems();
   } catch (error) {
     console.error("Failed to load portfolio items", error);
   }
@@ -80,6 +118,14 @@ export default async function HomePage() {
   } catch (error) {
     console.error("Failed to load FAQs", error);
   }
+
+  const heroTitle = siteConfig?.heroTitle ?? HERO_FALLBACK.title;
+  const heroSubtitle = siteConfig?.heroSubtitle ?? HERO_FALLBACK.subtitle;
+  const heroPrimaryCtaLabel = siteConfig?.heroPrimaryCtaLabel ?? HERO_FALLBACK.primaryLabel;
+  const heroPrimaryCtaLink = siteConfig?.heroPrimaryCtaLink ?? HERO_FALLBACK.primaryLink;
+  const heroSecondaryCtaLabel = siteConfig?.heroSecondaryCtaLabel ?? HERO_FALLBACK.secondaryLabel;
+  const heroSecondaryCtaLink = siteConfig?.heroSecondaryCtaLink ?? HERO_FALLBACK.secondaryLink;
+  const serviceOptions = services.map((svc) => ({ id: svc.id, label: svc.title }));
 
   return (
     <main className="min-h-screen bg-blush-50">
@@ -109,17 +155,15 @@ export default async function HomePage() {
           <div className="space-y-5">
             <p className="text-sm uppercase tracking-[0.5em] text-slate-500">Anam Soft for salons & spas</p>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold leading-tight text-slate-900">
-              Modern salon websites that book more clients
+              {heroTitle}
             </h1>
-            <p className="text-lg text-slate-700 leading-relaxed max-w-2xl">
-              Mobile-first websites for beauty salons, nail & hair studios, and spas that highlight your services, show availability, and turn visitors into appointments.
-            </p>
+            <p className="text-lg text-slate-700 leading-relaxed max-w-2xl">{heroSubtitle}</p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button size="lg" className="shadow-soft hover:shadow-lg" asChild>
-                <a href="#estimate">Get a 2-minute estimate</a>
+                <a href={heroPrimaryCtaLink}>{heroPrimaryCtaLabel}</a>
               </Button>
               <Button variant="outline" size="lg" className="border-slate-200 text-slate-700 hover:border-slate-300 hover:text-blush-700" asChild>
-                <a href="#consultation">Book a 20-min consultation</a>
+                <a href={heroSecondaryCtaLink}>{heroSecondaryCtaLabel}</a>
               </Button>
             </div>
             <p className="text-xs text-slate-500">No commitment • Reply within 24h</p>
@@ -260,71 +304,71 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Who I work with & Benefits */}
-      <section id="services" className="section-shell max-w-6xl py-16 md:py-20 space-y-10 fade-up">
-        <div className="grid gap-10 lg:grid-cols-[1fr,1fr] items-start">
-          <div className="space-y-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.6em] text-slate-500">Built for salons & spas</p>
-            <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Websites for beauty & wellness businesses</h2>
-            <p className="text-lg text-slate-600 max-w-2xl">
-              Mobile-first websites that showcase your services, highlight availability, and keep bookings flowing.
-            </p>
-            <div className="space-y-3 text-sm text-slate-600">
-              {[
-                "More online bookings",
-                "Mobile-first for Instagram",
-                "Fast, clean first impression",
-              ].map((text) => (
-                <div key={text} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-blush-500" aria-hidden />
-                  <span>{text}</span>
-                </div>
-              ))}
-            </div>
-            <Button variant="link" className="text-blush-600 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blush-200 focus-visible:ring-offset-2" size="sm" asChild>
-              <a href="#pricing">See packages →</a>
-            </Button>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
-            {[
-              {
-                title: "More online bookings",
-                desc: "Clear CTAs and booking links that match your services.",
-                icon: CalendarClock,
-              },
-              {
-                title: "Professional story",
-                desc: "Delicate typography, premium spacing, and refined imagery.",
-                icon: Palette,
-              },
-              {
-                title: "Ready for mobile",
-                desc: "Fast builds that keep your Instagram referrals clicking ‘Book’.",
-                icon: Workflow,
-              },
-              {
-                title: "Easy updates",
-                desc: "Access your site to tweak services, prices, or gallery.",
-                icon: Sparkles,
-              },
-            ].map((item) => (
-              <Card
-                key={item.title}
-                className="flex h-full flex-col rounded-[24px] border border-slate-100 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-within:ring-2 focus-within:ring-blush-200 focus-within:ring-offset-2"
-              >
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blush-50 text-blush-600">
-                    <item.icon className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-900 leading-snug">{item.title}</h3>
-                  </div>
-                </div>
-                <p className="mt-3 text-sm text-slate-600 leading-relaxed">{item.desc}</p>
-              </Card>
-            ))}
-          </div>
+      {/* Services */}
+      <section id="services" className="section-shell max-w-6xl py-16 md:py-20 space-y-8 fade-up">
+        <div className="space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.6em] text-slate-500">Built for salons & spas</p>
+          <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Websites aligned with your service catalog</h2>
+          <p className="text-lg text-slate-600 max-w-3xl">
+            {services.length
+              ? `Live services highlight your offer and can be updated directly from the admin in real-time.`
+              : "Service entries will show up here as soon as they are published in the admin console."}
+          </p>
         </div>
+        {services.length === 0 ? (
+          <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 text-sm leading-relaxed text-slate-600">
+            Add services and packages in the admin so visitors can see what you deliver and how fast.
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {services.map((service) => {
+              const serviceLink = service.slug ? `/services/${service.slug}` : "#contact";
+              const priceText = formatCurrency(service.startingPrice, service.currency ?? "EUR");
+              const deliveryText =
+                service.deliveryDaysMin || service.deliveryDaysMax
+                  ? `Delivery ${service.deliveryDaysMin ?? "--"}${service.deliveryDaysMax ? `–${service.deliveryDaysMax}` : ""} days`
+                  : null;
+              return (
+                <Card
+                  key={service.id}
+                  className="flex h-full flex-col justify-between gap-5 rounded-[24px] border border-slate-100 bg-white/95 p-6 shadow-sm transition hover:border-slate-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-blush-200 focus-within:ring-offset-2"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs uppercase tracking-[0.4em] text-slate-400">Service</span>
+                      {service.isActive && (
+                        <Badge variant="outline" className="border-slate-200 text-slate-500">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                    <h3 className="text-2xl font-semibold text-slate-900">{service.title}</h3>
+                    <p className="text-sm text-slate-600 min-h-[3.5rem]">
+                      {service.shortDescription ?? service.description ?? "More detail coming soon."}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 text-sm text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-900">Price</span>
+                      <span className="text-[#972042]">{priceText}</span>
+                    </div>
+                    {deliveryText && (
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-900">Delivery</span>
+                        <span>{deliveryText}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={serviceLink}>Learn more</Link>
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <PricingSection />
@@ -465,7 +509,7 @@ export default async function HomePage() {
         )}
       </section>
 
-      <ContactSection email={email} whatsapp={whatsapp} />
+      <ContactSection email={email} whatsapp={whatsapp} serviceOptions={serviceOptions} />
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white/80">

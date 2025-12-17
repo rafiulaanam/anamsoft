@@ -66,6 +66,10 @@ async function main() {
           "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients.",
         email: "hello@anamsoft.com",
         whatsapp: "+370 611 04553",
+        heroPrimaryCtaLabel: "Get a 2-minute estimate",
+        heroPrimaryCtaLink: "#estimate",
+        heroSecondaryCtaLabel: "Book a 20-min consultation",
+        heroSecondaryCtaLink: "#consultation",
       },
     });
   } else {
@@ -76,6 +80,10 @@ async function main() {
           "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients.",
         email: "hello@anamsoft.com",
         whatsapp: "+370 611 04553",
+        heroPrimaryCtaLabel: "Get a 2-minute estimate",
+        heroPrimaryCtaLink: "#estimate",
+        heroSecondaryCtaLabel: "Book a 20-min consultation",
+        heroSecondaryCtaLink: "#consultation",
       },
     });
   }

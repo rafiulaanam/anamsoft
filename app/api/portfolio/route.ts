@@ -2,10 +2,17 @@ import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 
+const CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+};
+
 export async function GET() {
   try {
-    const items = await prisma.portfolioItem.findMany({ orderBy: { createdAt: "desc" } });
-    return NextResponse.json({ data: items });
+    const items = await prisma.portfolioItem.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({ data: items }, { headers: CACHE_HEADERS });
   } catch (error) {
     console.error("Error fetching portfolio items", error);
     return NextResponse.json({ error: "Failed to fetch portfolio" }, { status: 500 });

@@ -10,9 +10,13 @@ interface SheetProps {
 export function Sheet({ open, onOpenChange, children }: SheetProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end bg-slate-950/50 backdrop-blur-sm" onClick={() => onOpenChange(false)} role="presentation">
+    <div
+      className="fixed inset-0 z-50 h-screen flex items-start justify-end bg-slate-950/80 backdrop-blur-md"
+      onClick={() => onOpenChange(false)}
+      role="presentation"
+    >
       <div
-        className="relative h-full w-full max-w-lg overflow-hidden rounded-tl-3xl bg-transparent"
+        className="relative h-full w-full overflow-hidden rounded-tl-3xl bg-transparent flex justify-end"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -24,7 +28,7 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
 }
 
 export function SheetHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("border-b border-slate-200/50 px-6 pt-6 pb-3", className)} {...props} />;
+  return <div className={cn("sticky top-0 z-10 border-b border-slate-200/50 bg-white/90 px-6 pt-6 pb-3 backdrop-blur", className)} {...props} />;
 }
 
 export function SheetTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
@@ -35,7 +39,7 @@ export function SheetContent({ className, ...props }: React.HTMLAttributes<HTMLD
   return (
     <div
       className={cn(
-        "flex h-full flex-col gap-4 overflow-y-auto bg-white/90 px-6 pt-4 pb-6 shadow-2xl shadow-slate-950/20 backdrop-saturate-150",
+        "relative flex h-full w-full max-w-full flex-col gap-4 overflow-hidden bg-white/90 px-6 pt-4 pb-6 shadow-2xl shadow-slate-950/20 backdrop-saturate-150 sm:max-w-[80vw] lg:max-w-[640px]",
         className
       )}
       {...props}
@@ -48,5 +52,5 @@ export function SheetDescription({ className, ...props }: React.HTMLAttributes<H
 }
 
 export function SheetFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("flex items-center justify-end gap-3 border-t border-slate-200/50 px-6 py-4", className)} {...props} />;
+  return <div className={cn("sticky bottom-0 z-10 flex items-center justify-end gap-3 border-t border-slate-200/50 bg-white/90 px-6 py-4 backdrop-blur", className)} {...props} />;
 }

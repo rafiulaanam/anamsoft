@@ -7,6 +7,10 @@ const defaultConfig = {
     "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients.",
   email: "hello@anamsoft.com",
   whatsapp: "+370 611 04553",
+  heroPrimaryCtaLabel: "Get a 2-minute estimate",
+  heroPrimaryCtaLink: "#estimate",
+  heroSecondaryCtaLabel: "Book a 20-min consultation",
+  heroSecondaryCtaLink: "#consultation",
 };
 
 export async function GET() {
@@ -25,7 +29,16 @@ export async function GET() {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { heroTitle, heroSubtitle, email, whatsapp } = body ?? {};
+    const {
+      heroTitle,
+      heroSubtitle,
+      email,
+      whatsapp,
+      heroPrimaryCtaLabel,
+      heroPrimaryCtaLink,
+      heroSecondaryCtaLabel,
+      heroSecondaryCtaLink,
+    } = body ?? {};
 
     let config = await prisma.siteConfig.findFirst();
     if (!config) {
@@ -34,12 +47,16 @@ export async function PATCH(req: NextRequest) {
           ...defaultConfig,
           heroTitle: heroTitle ?? defaultConfig.heroTitle,
           heroSubtitle: heroSubtitle ?? defaultConfig.heroSubtitle,
-          email: email ?? defaultConfig.email,
-          whatsapp: whatsapp ?? defaultConfig.whatsapp,
-        },
-      });
-      return NextResponse.json({ data: config });
-    }
+        email: email ?? defaultConfig.email,
+        whatsapp: whatsapp ?? defaultConfig.whatsapp,
+        heroPrimaryCtaLabel: heroPrimaryCtaLabel ?? defaultConfig.heroPrimaryCtaLabel,
+        heroPrimaryCtaLink: heroPrimaryCtaLink ?? defaultConfig.heroPrimaryCtaLink,
+        heroSecondaryCtaLabel: heroSecondaryCtaLabel ?? defaultConfig.heroSecondaryCtaLabel,
+        heroSecondaryCtaLink: heroSecondaryCtaLink ?? defaultConfig.heroSecondaryCtaLink,
+      },
+    });
+    return NextResponse.json({ data: config });
+  }
 
     const updated = await prisma.siteConfig.update({
       where: { id: config.id },
@@ -48,6 +65,10 @@ export async function PATCH(req: NextRequest) {
         heroSubtitle: heroSubtitle ?? config.heroSubtitle,
         email: email ?? config.email,
         whatsapp: whatsapp ?? config.whatsapp,
+        heroPrimaryCtaLabel: heroPrimaryCtaLabel ?? config.heroPrimaryCtaLabel,
+        heroPrimaryCtaLink: heroPrimaryCtaLink ?? config.heroPrimaryCtaLink,
+        heroSecondaryCtaLabel: heroSecondaryCtaLabel ?? config.heroSecondaryCtaLabel,
+        heroSecondaryCtaLink: heroSecondaryCtaLink ?? config.heroSecondaryCtaLink,
       },
     });
 

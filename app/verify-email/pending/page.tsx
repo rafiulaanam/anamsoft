@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,34 @@ export default function VerifyEmailPendingPage() {
   const disabled = useMemo(() => cooldown > 0, [cooldown]);
   const autoResent = useRef(false);
 
+  const handleResend = useCallback(
+    async (silent?: boolean) => {
+      setError(null);
+      if (!silent) setMessage(null);
+      if (!email) {
+        setError("Enter your email to resend the verification link.");
+        return;
+      }
+      try {
+        const res = await fetch("/api/auth/resend-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || "Could not resend verification email.");
+        }
+        const retryMs = typeof data?.cooldownMs === "number" ? data.cooldownMs : COOLDOWN_SECONDS * 1000;
+        setCooldown(Math.ceil(retryMs / 1000));
+        setMessage(`Verification email sent to ${email}. Check your inbox.`);
+      } catch (err: any) {
+        setError(err?.message || "Could not resend verification email.");
+      }
+    },
+    [email]
+  );
+
   useEffect(() => {
     if (errorParam === "invalid") {
       setError("Verification link is invalid or expired. We’ve sent a new link, or you can resend below.");
@@ -45,7 +73,7 @@ export default function VerifyEmailPendingPage() {
         void handleResend(true);
       }
     }
-  }, [errorParam, email]);
+  }, [errorParam, email, handleResend]);
 
   useEffect(() => {
     if (!cooldown) return;
@@ -54,31 +82,6 @@ export default function VerifyEmailPendingPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
-
-  const handleResend = async (silent?: boolean) => {
-    setError(null);
-    if (!silent) setMessage(null);
-    if (!email) {
-      setError("Enter your email to resend the verification link.");
-      return;
-    }
-    try {
-      const res = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || "Could not resend verification email.");
-      }
-      const retryMs = typeof data?.cooldownMs === "number" ? data.cooldownMs : COOLDOWN_SECONDS * 1000;
-      setCooldown(Math.ceil(retryMs / 1000));
-      setMessage(`Verification email sent to ${email}. Check your inbox.`);
-    } catch (err: any) {
-      setError(err?.message || "Could not resend verification email.");
-    }
-  };
 
   const inboxHref = inboxLink(email);
 

@@ -1,10 +1,22 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+const toNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (!Number.isNaN(parsed)) return parsed;
+  }
+  return undefined;
+};
+
 export async function GET() {
   try {
     const services = await prisma.service.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [
+        { sortOrder: "asc" },
+        { updatedAt: "desc" },
+      ],
     });
     return NextResponse.json({ data: services });
   } catch (error) {
@@ -16,19 +28,40 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, slug, description, priceFrom, isFeatured } = body ?? {};
+    const {
+      title,
+      slug,
+      shortDescription,
+      description,
+      icon,
+      imageUrl,
+      startingPrice,
+      currency,
+      deliveryDaysMin,
+      deliveryDaysMax,
+      isActive,
+    } = body ?? {};
 
-    if (!name || !slug || !description) {
-      return NextResponse.json({ error: "name, slug, and description are required" }, { status: 400 });
+    if (!title || !slug || !shortDescription || !description) {
+      return NextResponse.json(
+        { error: "title, slug, shortDescription, and description are required" },
+        { status: 400 }
+      );
     }
 
     const service = await prisma.service.create({
       data: {
-        name,
+        title,
         slug,
+        shortDescription,
         description,
-        priceFrom: priceFrom ?? null,
-        isFeatured: Boolean(isFeatured),
+        icon: icon ?? null,
+        imageUrl: imageUrl ?? null,
+        startingPrice: toNumber(startingPrice),
+        currency: currency ?? "EUR",
+        deliveryDaysMin: toNumber(deliveryDaysMin),
+        deliveryDaysMax: toNumber(deliveryDaysMax),
+        isActive: typeof isActive === "boolean" ? isActive : true,
       },
     });
 

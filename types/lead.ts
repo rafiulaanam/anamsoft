@@ -31,6 +31,8 @@ export type LeadRow = {
   lastActivityAt?: string | null;
   value?: number | null;
   budgetRange?: string | null;
+  timeline?: string | null;
+  attachments?: { label: string; url?: string | null; type?: string | null }[] | null;
   serviceInterest?: string | null;
   targetDeadline?: string | null;
   meetingAt?: string | null;

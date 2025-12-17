@@ -1,11 +1,12 @@
-import { ContactForm } from "@/components/sections/contact-form";
+import { LeadCaptureForm } from "@/components/sections/lead-capture-form";
 
 interface ContactSectionProps {
   email: string;
   whatsapp: string;
+  serviceOptions?: { id: string; label: string }[];
 }
 
-export function ContactSection({ email, whatsapp }: ContactSectionProps) {
+export function ContactSection({ email, whatsapp, serviceOptions }: ContactSectionProps) {
   const whatsappHref = `https://wa.me/${whatsapp.replace(/\D/g, "")}`;
 
   return (
@@ -51,7 +52,11 @@ export function ContactSection({ email, whatsapp }: ContactSectionProps) {
               </p>
             </div>
             <div className="mt-6">
-              <ContactForm />
+              <LeadCaptureForm
+                serviceOptions={serviceOptions}
+                source="home_contact_section"
+                submitLabel="Send project brief"
+              />
             </div>
           </div>
         </div>
