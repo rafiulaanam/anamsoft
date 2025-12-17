@@ -1,7 +1,12 @@
-import { Resend } from "resend";
+import { Resend, type EmailApiOptions } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const DEFAULT_FROM = process.env.EMAIL_FROM ?? "AnamSoft <hello@anamsoft.com>";
+const DEFAULT_REPLY_TO = process.env.REPLY_FROM_EMAIL ?? "hello@anamsoft.com";
+const BASE_SEND_OPTIONS: Pick<EmailApiOptions, "from" | "reply_to"> = {
+  from: DEFAULT_FROM,
+  reply_to: DEFAULT_REPLY_TO,
+};
 
 export interface ProjectEstimateEmailPayload {
   id: string;
@@ -90,7 +95,7 @@ export type LeadEmailPayload = {
 export async function sendLeadNotificationEmail(lead: LeadEmailPayload) {
   try {
     const { error } = await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: [process.env.EMAIL_TO ?? "hello@anamsoft.com"],
       subject: `New salon lead – ${lead.salonName}`,
       html: `
@@ -187,7 +192,7 @@ export async function sendLeadConfirmationEmail(lead: { name: string; salonName:
     `;
 
     const { error } = await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: [lead.email],
       subject: `Thanks for contacting AnamSoft about ${lead.salonName}`,
       html,
@@ -220,7 +225,7 @@ export async function sendEstimateReplyEmail(opts: { to: string; subject: string
 
   try {
     const { error } = await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to,
       subject,
       html,
@@ -287,7 +292,7 @@ export async function sendProjectEstimateToAdmin(payload: ProjectEstimatePayload
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to,
       subject: `[${siteName}] New website estimate from ${name}`,
       html,
@@ -389,7 +394,7 @@ export async function sendProjectEstimateConfirmationEmail(
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: email,
       subject: `${siteName}: your website estimate`,
       html,
@@ -433,7 +438,7 @@ export async function sendWebsiteAuditToAdmin(payload: WebsiteAuditPayload, conf
     `;
 
   const { error } = await resend.emails.send({
-    from: DEFAULT_FROM,
+    ...BASE_SEND_OPTIONS,
     to,
     subject,
     html,
@@ -514,7 +519,7 @@ export async function sendWebsiteAuditConfirmationToClient(payload: WebsiteAudit
     `;
 
   const { error } = await resend.emails.send({
-    from: DEFAULT_FROM,
+    ...BASE_SEND_OPTIONS,
     to: payload.email,
     subject: "We’ve received your website audit request",
     html,
@@ -634,7 +639,7 @@ export async function sendEmailVerificationEmail(
     `;
 
     const { error } = await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: [user.email],
       subject,
       html,
@@ -655,7 +660,7 @@ export async function sendPasswordResetEmail(
     }/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
 
     const { error } = await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: [user.email],
       subject: "Reset your password for AnamSoft",
       html: `
@@ -697,7 +702,7 @@ export async function sendContactLeadEmailToAdmin(payload: ContactLeadPayload, c
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to,
       subject,
       html,
@@ -755,7 +760,7 @@ export async function sendContactLeadConfirmationEmail(payload: ContactLeadPaylo
   `;
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: email,
       subject,
       html,
@@ -774,7 +779,7 @@ export async function sendProjectEstimateAdminNotification(
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to,
       subject: `New project estimate from ${estimate.name}`,
       html: `
@@ -809,7 +814,7 @@ export async function sendProjectEstimateClientConfirmation(
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: estimate.email,
       subject: `Thanks for your project details – ${siteName}`,
       html: `
@@ -842,7 +847,7 @@ export async function sendWebsiteAuditAdminNotification(
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to,
       subject: `New website audit request from ${audit.name}`,
       html: `
@@ -872,7 +877,7 @@ export async function sendWebsiteAuditClientConfirmation(
 
   try {
     await resend.emails.send({
-      from: DEFAULT_FROM,
+      ...BASE_SEND_OPTIONS,
       to: audit.email,
       subject: `Thanks for requesting a website audit – ${siteName}`,
       html: `
