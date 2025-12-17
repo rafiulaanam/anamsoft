@@ -7,6 +7,8 @@ import { ServiceCreateSchema, ServiceUpdateSchema } from "@/lib/validators/servi
 import type { ServiceFormState } from "./types";
 
 const initialError = "Please review the form and try again.";
+const MAX_FEATURED_PACKAGES = 3;
+const MAX_FEATURES = 12;
 
 type ActionResponse<T = undefined> = {
   ok: boolean;
@@ -85,6 +87,30 @@ function revalidateService(serviceId: string) {
   revalidatePath(`/admin/services/${serviceId}`);
 }
 
+async function enforceFeaturedLimit(serviceId: string, keepId?: string) {
+  const featured = await prisma.servicePackage.findMany({
+    where: { serviceId, isFeaturedOnLanding: true },
+    orderBy: { updatedAt: "asc" },
+  });
+  if (featured.length <= MAX_FEATURED_PACKAGES) {
+    return [];
+  }
+
+  const overflow = featured.filter((pkg) => pkg.id !== keepId);
+  const toUnfeature = Math.max(0, featured.length - MAX_FEATURED_PACKAGES);
+  const targets = overflow.slice(0, toUnfeature);
+  if (targets.length === 0) {
+    return [];
+  }
+
+  await prisma.servicePackage.updateMany({
+    where: { id: { in: targets.map((pkg) => pkg.id) } },
+    data: { isFeaturedOnLanding: false },
+  });
+
+  return targets.map((pkg) => pkg.title ?? "Untitled package");
+}
+
 export async function createService(
   _prevState: ServiceFormState,
   formData: FormData
@@ -161,12 +187,10 @@ export async function updateService(
 // -------- Packages --------
 
 export async function fetchPackages(serviceId: string) {
-  const packages = await prisma.servicePackage.findMany({
+  return prisma.servicePackage.findMany({
     where: { serviceId },
     orderBy: { sortOrder: "asc" },
-    include: { items: { orderBy: { sortOrder: "asc" } } },
   });
-  return packages;
 }
 
 export async function createPackage(
@@ -174,15 +198,32 @@ export async function createPackage(
   formData: FormData
 ): Promise<ActionResponse> {
   try {
-    const name = (formData.get("name") as string)?.trim();
-    const price = (formData.get("price") as string)?.trim();
-    const currency = ((formData.get("currency") as string) || "EUR").trim();
+    const title = (formData.get("title") as string)?.trim();
+    const priceFrom = (formData.get("priceFrom") as string)?.trim();
     const deliveryDays = (formData.get("deliveryDays") as string)?.trim();
+    const currency = ((formData.get("currency") as string) || "EUR").trim();
+    const description = parseOptionalString(formData.get("description"));
+    const badge = parseOptionalString(formData.get("badge"));
+    const ctaLabel = parseOptionalString(formData.get("ctaLabel"));
+    const ctaHref = parseOptionalString(formData.get("ctaHref"));
+    const isFeaturedOnLanding = formData.get("isFeaturedOnLanding") === "true";
     const isRecommended = formData.get("isRecommended") === "true";
     const isActive = formData.get("isActive") !== "false";
 
-    if (!name || !price) {
-      return { ok: false, message: "Name and price are required." };
+    if (!title) {
+      return { ok: false, message: "Title is required." };
+    }
+
+    const priceValue =
+      priceFrom && priceFrom.length > 0 ? Number(priceFrom) : null;
+    if (priceFrom && (Number.isNaN(priceValue) || priceValue <= 0)) {
+      return { ok: false, message: "Price must be greater than 0." };
+    }
+    if (isFeaturedOnLanding && (priceValue === null || priceValue <= 0)) {
+      return {
+        ok: false,
+        message: "Featured packages require a price greater than 0.",
+      };
     }
 
     const sortOrder =
@@ -198,19 +239,31 @@ export async function createPackage(
     const pkg = await prisma.servicePackage.create({
       data: {
         serviceId,
-        name,
-        price: new Prisma.Decimal(price),
+        title,
+        priceFrom: priceValue,
         currency,
+        description,
+        badge,
+        ctaLabel,
+        ctaHref,
+        isFeaturedOnLanding,
         deliveryDays: deliveryDays ? Number(deliveryDays) : null,
         isRecommended,
         isActive,
         sortOrder,
+        features: [],
       },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
     });
 
     revalidateService(serviceId);
-    return { ok: true, data: pkg, message: "Package added" };
+    const unfeaturedTitles = await enforceFeaturedLimit(serviceId, pkg.id);
+    const message =
+      unfeaturedTitles.length > 0
+        ? `Package added. ${unfeaturedTitles.join(
+            ", "
+          )} was unfeatured to keep ${MAX_FEATURED_PACKAGES} featured packages.`
+        : "Package added";
+    return { ok: true, data: pkg, message };
   } catch (error) {
     console.error("createPackage", error);
     return { ok: false, message: "Failed to create package" };
@@ -225,12 +278,40 @@ export async function updatePackage(
     const existing = await prisma.servicePackage.findUnique({ where: { id: packageId } });
     if (!existing) return { ok: false, message: "Package not found" };
 
-    const name = (formData.get("name") as string)?.trim() || existing.name;
-    const price = (formData.get("price") as string)?.trim() || existing.price.toString();
-    const currency = ((formData.get("currency") as string) || existing.currency).trim();
-    const deliveryDays = (formData.get("deliveryDays") as string)?.trim();
-    const isActive = formData.get("isActive") === "true" ? true : formData.get("isActive") === "false" ? false : existing.isActive;
-    const isRecommended = formData.get("isRecommended") === "true" ? true : existing.isRecommended;
+    const title = parseOptionalString(formData.get("title")) ?? existing.title;
+    const priceFromRaw = formData.get("priceFrom");
+    const priceFromInput = typeof priceFromRaw === "string" ? priceFromRaw.trim() : "";
+    let priceFromNumber: number | null;
+    if (priceFromRaw === null) {
+      priceFromNumber = existing.priceFrom;
+    } else if (priceFromInput === "") {
+      priceFromNumber = null;
+    } else {
+      priceFromNumber = Number(priceFromInput);
+      if (Number.isNaN(priceFromNumber) || priceFromNumber < 0) {
+        return { ok: false, message: "Price must be greater than 0." };
+      }
+    }
+    const deliveryDaysValue = (formData.get("deliveryDays") as string)?.trim();
+    const currency = ((formData.get("currency") as string)?.trim()) || existing.currency || "EUR";
+    const description = parseOptionalString(formData.get("description"));
+    const badge = parseOptionalString(formData.get("badge"));
+    const ctaLabel = parseOptionalString(formData.get("ctaLabel"));
+    const ctaHref = parseOptionalString(formData.get("ctaHref"));
+    const isFeaturedOnLanding =
+      formData.get("isFeaturedOnLanding") === "true"
+        ? true
+        : formData.get("isFeaturedOnLanding") === "false"
+        ? false
+        : existing.isFeaturedOnLanding;
+    const isRecommended =
+      formData.get("isRecommended") === "true" ? true : existing.isRecommended;
+    const isActive =
+      formData.get("isActive") === "true"
+        ? true
+        : formData.get("isActive") === "false"
+        ? false
+        : existing.isActive;
 
     if (isRecommended) {
       await prisma.servicePackage.updateMany({
@@ -239,21 +320,39 @@ export async function updatePackage(
       });
     }
 
+    if (isFeaturedOnLanding && (priceFromNumber === null || priceFromNumber <= 0)) {
+      return {
+        ok: false,
+        message: "Featured packages require a price greater than 0.",
+      };
+    }
+
     const pkg = await prisma.servicePackage.update({
       where: { id: packageId },
       data: {
-        name,
-        price: new Prisma.Decimal(price),
+        title,
+        priceFrom: priceFromNumber ?? existing.priceFrom,
         currency,
-        deliveryDays: deliveryDays ? Number(deliveryDays) : null,
-        isActive,
+        description: description ?? existing.description,
+        badge: badge ?? existing.badge,
+        ctaLabel: ctaLabel ?? existing.ctaLabel,
+        ctaHref: ctaHref ?? existing.ctaHref,
+        isFeaturedOnLanding,
+        deliveryDays: deliveryDaysValue ? Number(deliveryDaysValue) : existing.deliveryDays,
         isRecommended,
+        isActive,
       },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
     });
 
     revalidateService(existing.serviceId);
-    return { ok: true, data: pkg, message: "Package updated" };
+    const unfeaturedTitles = await enforceFeaturedLimit(existing.serviceId, pkg.id);
+    const message =
+      unfeaturedTitles.length > 0
+        ? `Package updated. ${unfeaturedTitles.join(
+            ", "
+          )} was unfeatured to keep ${MAX_FEATURED_PACKAGES} featured packages.`
+        : "Package updated";
+    return { ok: true, data: pkg, message };
   } catch (error) {
     console.error("updatePackage", error);
     return { ok: false, message: "Failed to update package" };
@@ -278,7 +377,6 @@ export async function togglePackageActive(packageId: string): Promise<ActionResp
     const updated = await prisma.servicePackage.update({
       where: { id: packageId },
       data: { isActive: !pkg.isActive },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
     });
     revalidateService(pkg.serviceId);
     return { ok: true, data: updated, message: updated.isActive ? "Activated" : "Deactivated" };
@@ -307,7 +405,6 @@ export async function setPackageRecommended(packageId: string): Promise<ActionRe
     const updated = await prisma.servicePackage.findMany({
       where: { serviceId: pkg.serviceId },
       orderBy: { sortOrder: "asc" },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
     });
 
     revalidatePath(`/admin/services/${pkg.serviceId}`);
@@ -318,7 +415,10 @@ export async function setPackageRecommended(packageId: string): Promise<ActionRe
   }
 }
 
-export async function movePackage(packageId: string, direction: "up" | "down"): Promise<ActionResponse> {
+export async function movePackage(
+  packageId: string,
+  direction: "up" | "down"
+): Promise<ActionResponse> {
   try {
     const pkg = await prisma.servicePackage.findUnique({ where: { id: packageId } });
     if (!pkg) return { ok: false, message: "Package not found" };
@@ -353,102 +453,101 @@ export async function movePackage(packageId: string, direction: "up" | "down"): 
   }
 }
 
-// -------- Package items --------
+// -------- Package features --------
 
-export async function createPackageItem(
+async function mutatePackageFeatures(
   packageId: string,
-  text: string
-): Promise<ActionResponse> {
+  updater: (features: string[]) => string[],
+  successMessage: string,
+  failureMessage: string
+): Promise<ActionResponse<string[]>> {
   try {
     const pkg = await prisma.servicePackage.findUnique({ where: { id: packageId } });
     if (!pkg) return { ok: false, message: "Package not found" };
-
-    const sortOrder =
-      ((await prisma.servicePackageItem.count({ where: { packageId } })) || 0) + 1;
-
-    const item = await prisma.servicePackageItem.create({
-      data: {
-        packageId,
-        text,
-        sortOrder,
-      },
+    const updatedFeatures = updater(pkg.features ?? []);
+    if (updatedFeatures.length > MAX_FEATURES) {
+      return {
+        ok: false,
+        message: `Each package can only have up to ${MAX_FEATURES} features.`,
+      };
+    }
+    const updated = await prisma.servicePackage.update({
+      where: { id: packageId },
+      data: { features: updatedFeatures },
     });
-    revalidatePath(`/admin/services/${pkg.serviceId}`);
-    return { ok: true, data: item, message: "Item added" };
+    revalidateService(pkg.serviceId);
+    return { ok: true, data: updated.features, message: successMessage };
   } catch (error) {
-    console.error("createPackageItem", error);
-    return { ok: false, message: "Failed to add item" };
+    console.error("mutatePackageFeatures", error);
+    return { ok: false, message: failureMessage };
   }
 }
 
-export async function updatePackageItem(
-  itemId: string,
+export async function addPackageFeature(
+  packageId: string,
   text: string
-): Promise<ActionResponse> {
-  try {
-    const item = await prisma.servicePackageItem.update({
-      where: { id: itemId },
-      data: { text },
-    });
-    const pkg = await prisma.servicePackage.findUnique({ where: { id: item.packageId } });
-    if (pkg) revalidateService(pkg.serviceId);
-    return { ok: true, data: item, message: "Item updated" };
-  } catch (error) {
-    console.error("updatePackageItem", error);
-    return { ok: false, message: "Failed to update item" };
-  }
+): Promise<ActionResponse<string[]>> {
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, message: "Feature text is required." };
+  return mutatePackageFeatures(
+    packageId,
+    (features) => [...features, trimmed],
+    "Feature added",
+    "Failed to add feature"
+  );
 }
 
-export async function deletePackageItem(itemId: string): Promise<ActionResponse> {
-  try {
-    const item = await prisma.servicePackageItem.delete({ where: { id: itemId } });
-    const pkg = await prisma.servicePackage.findUnique({ where: { id: item.packageId } });
-    if (pkg) revalidateService(pkg.serviceId);
-    return { ok: true, message: "Item deleted" };
-  } catch (error) {
-    console.error("deletePackageItem", error);
-    return { ok: false, message: "Failed to delete item" };
-  }
+export async function updatePackageFeature(
+  packageId: string,
+  index: number,
+  text: string
+): Promise<ActionResponse<string[]>> {
+  const trimmed = text.trim();
+  if (!trimmed) return { ok: false, message: "Feature text is required." };
+  return mutatePackageFeatures(
+    packageId,
+    (features) => {
+      if (index < 0 || index >= features.length) return features;
+      const next = [...features];
+      next[index] = trimmed;
+      return next;
+    },
+    "Feature updated",
+    "Failed to update feature"
+  );
 }
 
-export async function movePackageItem(
-  itemId: string,
+export async function deletePackageFeature(
+  packageId: string,
+  index: number
+): Promise<ActionResponse<string[]>> {
+  return mutatePackageFeatures(
+    packageId,
+    (features) => {
+      if (index < 0 || index >= features.length) return features;
+      return [...features.slice(0, index), ...features.slice(index + 1)];
+    },
+    "Feature deleted",
+    "Failed to remove feature"
+  );
+}
+
+export async function movePackageFeature(
+  packageId: string,
+  index: number,
   direction: "up" | "down"
-): Promise<ActionResponse> {
-  try {
-    const item = await prisma.servicePackageItem.findUnique({ where: { id: itemId } });
-    if (!item) return { ok: false, message: "Item not found" };
-
-    const neighbor = await prisma.servicePackageItem.findFirst({
-      where: {
-        packageId: item.packageId,
-        sortOrder: direction === "up" ? { lt: item.sortOrder } : { gt: item.sortOrder },
-      } as any,
-      orderBy: { sortOrder: direction === "up" ? "desc" : "asc" },
-    });
-
-    if (!neighbor) return { ok: true, data: item };
-
-    await prisma.$transaction([
-      prisma.servicePackageItem.update({
-        where: { id: item.id },
-        data: { sortOrder: neighbor.sortOrder },
-      }),
-      prisma.servicePackageItem.update({
-        where: { id: neighbor.id },
-        data: { sortOrder: item.sortOrder },
-      }),
-    ]);
-
-    const items = await prisma.servicePackageItem.findMany({
-      where: { packageId: item.packageId },
-      orderBy: { sortOrder: "asc" },
-    });
-    const pkg = await prisma.servicePackage.findUnique({ where: { id: item.packageId } });
-    if (pkg) revalidateService(pkg.serviceId);
-    return { ok: true, data: items, message: "Item reordered" };
-  } catch (error) {
-    console.error("movePackageItem", error);
-    return { ok: false, message: "Failed to reorder item" };
-  }
+): Promise<ActionResponse<string[]>> {
+  return mutatePackageFeatures(
+    packageId,
+    (features) => {
+      if (index < 0 || index >= features.length) return features;
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < 0 || target >= features.length) return features;
+      const next = [...features];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    },
+    "Feature reordered",
+    "Failed to reorder feature"
+  );
 }

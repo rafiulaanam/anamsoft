@@ -1,55 +1,66 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { prisma } from "@/lib/db";
 
-const plans = [
-  {
-    name: "Starter Presence",
-    price: "from 399 €",
-    description: "Perfect for small studios that need a clean, simple website to look professional online.",
-    features: [
-      "1–3 pages (Home, Services, Contact)",
-      "Mobile-friendly design",
-      "Basic SEO setup",
-      "Contact form or WhatsApp link",
-      "Launch support",
-    ],
-    cta: "Book a free call",
-    highlight: false,
-  },
-  {
-    name: "Booking-Ready Website",
-    price: "from 699 €",
-    description: "Best for salons that want more online bookings from Google, Instagram and returning clients.",
-    features: [
-      "4–6 pages (Home, Services, Prices, Gallery, About, Contact)",
-      "Booking-focused layout (buttons + clear flows)",
-      "Integration with your booking tool (Fresha/Treatwell/WhatsApp)",
-      "Conversion-focused copy and structure",
-      "Basic on-page SEO (title, meta, headings)",
-      "Training call on how to use the site",
-    ],
-    cta: "Most popular – book a free call",
-    highlight: true,
-  },
-  {
-    name: "Premium Salon Experience",
-    price: "from 1199 €",
-    description: "For bigger salons or chains that need a custom design, multiple locations and extra integrations.",
-    features: [
-      "Custom-designed pages (up to X pages)",
-      "Multi-location or multi-language support (e.g. LT + EN)",
-      "Advanced gallery / portfolio",
-      "Blog or news section (optional)",
-      "Priority support for the first 3 months",
-      "Option to add ongoing maintenance (monthly)",
-    ],
-    cta: "Talk about a custom project",
-    highlight: false,
-  },
-];
+type PricingPlan = {
+  id: string;
+  title: string;
+  serviceTitle?: string;
+  badge?: string | null;
+  priceFrom: number | null;
+  currency?: string;
+  description?: string | null;
+  features: string[];
+  ctaLabel?: string | null;
+  ctaHref?: string | null;
+  isFeaturedOnLanding?: boolean;
+};
 
-export function PricingSection() {
+const formatCurrency = (value: number | null | undefined, currency = "EUR") => {
+  if (value == null) {
+    return "Custom quote";
+  }
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+export const dynamic = "force-dynamic";
+
+export async function PricingSection() {
+  const pkgRecords = await prisma.servicePackage.findMany({
+    where: { isActive: true, isFeaturedOnLanding: true },
+    orderBy: { sortOrder: "asc" },
+    take: 3,
+    include: {
+      service: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+  const plans = pkgRecords.map((pkg) => ({
+    id: pkg.id,
+    title: pkg.title ?? "Package",
+    serviceTitle: pkg.service?.title ?? undefined,
+    badge: pkg.badge ?? (pkg.isRecommended ? "Recommended" : undefined),
+    priceFrom: pkg.priceFrom ?? null,
+    currency: pkg.currency ?? "EUR",
+    description: pkg.description ?? "",
+    features: pkg.features ?? [],
+    ctaLabel: pkg.ctaLabel ?? "Book a free call",
+    ctaHref: pkg.ctaHref ?? "#contact",
+    isFeaturedOnLanding: pkg.isFeaturedOnLanding ?? false,
+  }));
+
+  if (plans.length === 0) {
+    return null;
+  }
+
   return (
     <section id="pricing" className="py-16 md:py-24 bg-muted/40">
       <div className="max-w-6xl mx-auto px-4 space-y-10">
@@ -66,37 +77,51 @@ export function PricingSection() {
         <div className="grid gap-6 md:grid-cols-3">
           {plans.map((plan) => (
             <Card
-              key={plan.name}
+              key={plan.id}
               className={`relative flex h-full flex-col rounded-3xl border bg-white/90 shadow-sm transition hover:-translate-y-1 hover:shadow-xl ${
-                plan.highlight ? "border-pink-300/70 bg-gradient-to-b from-white via-white to-pink-50" : ""
+                plan.isFeaturedOnLanding ? "border-pink-300/70 bg-gradient-to-b from-white via-white to-pink-50" : ""
               }`}
             >
-              {plan.highlight && (
+              {plan.badge && (
                 <div className="absolute inset-x-0 -top-3 flex justify-center">
-                  <Badge className="bg-pink-100 text-pink-700 border-pink-200">Most popular</Badge>
+                  <Badge className="bg-blush-100 text-pink-700 border-pink-200">{plan.badge}</Badge>
                 </div>
               )}
               <CardHeader className="space-y-2 pt-6">
-                <CardTitle className="text-xl text-slate-900">{plan.name}</CardTitle>
-                <p className="text-3xl font-semibold text-slate-900">{plan.price}</p>
-                <CardDescription className="text-slate-600">{plan.description}</CardDescription>
+                <CardTitle className="text-xl text-slate-900">{plan.title}</CardTitle>
+                {plan.serviceTitle && (
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                    {plan.serviceTitle}
+                  </p>
+                )}
+                <p className="text-3xl font-semibold text-slate-900">{formatCurrency(plan.priceFrom, plan.currency)}</p>
+                {plan.description && (
+                  <CardDescription className="text-slate-600">{plan.description}</CardDescription>
+                )}
               </CardHeader>
               <CardContent className="flex flex-1 flex-col gap-4">
                 <ul className="space-y-2 text-sm text-slate-700">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
+                  {plan.features.length === 0 ? (
+                    <li className="flex items-start gap-2">
                       <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blush-500" />
-                      <span>{feature}</span>
+                      <span>No features added yet</span>
                     </li>
-                  ))}
+                  ) : (
+                    plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blush-500" />
+                        <span>{feature}</span>
+                      </li>
+                    ))
+                  )}
                 </ul>
                 <div className="mt-auto pt-4">
                   <Button
                     asChild
-                    className={`w-full ${plan.highlight ? "" : "bg-white text-blush-700 border border-blush-200 hover:bg-blush-50"}`}
-                    variant={plan.highlight ? "default" : "outline"}
+                    className={`w-full ${plan.isFeaturedOnLanding ? "" : "bg-white text-blush-700 border border-blush-200 hover:bg-blush-50"}`}
+                    variant={plan.isFeaturedOnLanding ? "default" : "outline"}
                   >
-                    <a href="#contact">{plan.cta}</a>
+                    <a href={plan.ctaHref ?? "#contact"}>{plan.ctaLabel ?? "Book a free call"}</a>
                   </Button>
                 </div>
               </CardContent>

@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/data-table/data-table";
 import { cn } from "@/lib/utils";
+import { ManagePackagesDrawer } from "./manage-packages-drawer";
 
 export type ServiceRow = {
   id: string;
@@ -73,6 +74,11 @@ export function ServicesTable({ data, total, page, pageSize, query, status, sort
 
   const selectedAll = selectedIds.size > 0 && selectedIds.size === data.length;
   const selectedSome = selectedIds.size > 0 && selectedIds.size < data.length;
+  const [manageService, setManageService] = useState<ServiceRow | null>(null);
+
+  const handleManagePackages = useCallback((svc: ServiceRow) => {
+    setManageService(svc);
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -139,11 +145,13 @@ export function ServicesTable({ data, total, page, pageSize, query, status, sort
       {
         id: "actions",
         header: "",
-        cell: (row: ServiceRow) => <RowActions row={row} />,
+        cell: (row: ServiceRow) => (
+          <RowActions row={row} onManagePackages={() => handleManagePackages(row)} />
+        ),
         className: "text-right",
       },
     ],
-    [sort, toggleSort]
+    [sort, toggleSort, handleManagePackages]
   );
 
   const handleSearch = (formData: FormData) => {
@@ -258,11 +266,27 @@ export function ServicesTable({ data, total, page, pageSize, query, status, sort
           />
         )}
       </CardContent>
+      <ManagePackagesDrawer
+        open={Boolean(manageService)}
+        serviceId={manageService?.id ?? null}
+        serviceTitle={manageService?.title}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManageService(null);
+          }
+        }}
+      />
     </Card>
   );
 }
 
-function RowActions({ row }: { row: ServiceRow }) {
+function RowActions({
+  row,
+  onManagePackages,
+}: {
+  row: ServiceRow;
+  onManagePackages: () => void;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -272,6 +296,13 @@ function RowActions({ row }: { row: ServiceRow }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={(event) => {
+          event.preventDefault();
+          onManagePackages();
+        }}>
+          Manage packages
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={`/admin/services/${row.id}`}>Edit</Link>
         </DropdownMenuItem>

@@ -19,19 +19,19 @@ export default async function AdminServiceEditPage({ params }: { params: { id: s
     notFound();
   }
 
-  const hasPackagesModel = (prisma as any)?.servicePackage?.findMany;
-  const packages =
-    hasPackagesModel &&
-    (await prisma.servicePackage.findMany({
-      where: { serviceId: service.id },
-      orderBy: { sortOrder: "asc" },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
-    }));
+  const packages = await prisma.servicePackage.findMany({
+    where: { serviceId: service.id, NOT: { title: null } },
+    orderBy: { sortOrder: "asc" },
+  });
 
-  const mappedPackages = (packages ?? []).map((pkg) => ({
+  const mappedPackages = packages.map((pkg) => ({
     ...pkg,
-    price: pkg.price.toString(),
-    items: pkg.items.map((item) => ({ ...item })),
+    priceFrom: pkg.priceFrom ?? null,
+    description: pkg.description ?? "",
+    badge: pkg.badge ?? null,
+    ctaLabel: pkg.ctaLabel ?? null,
+    ctaHref: pkg.ctaHref ?? null,
+    features: pkg.features ?? [],
   }));
 
   return (

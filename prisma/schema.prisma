@@ -299,32 +299,25 @@ enum MeetingType {
 }
 
 model ServicePackage {
-  id            String             @id @default(auto()) @map("_id") @db.ObjectId
-  serviceId     String             @db.ObjectId
-  service       Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  name          String
-  price         Int
-  currency      String             @default("EUR")
-  deliveryDays  Int?
-  isRecommended Boolean            @default(false)
-  isActive      Boolean            @default(true)
-  sortOrder     Int                @default(0)
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  deletedAt     DateTime?
-
-  items ServicePackageItem[]
-}
-
-model ServicePackageItem {
-  id         String          @id @default(auto()) @map("_id") @db.ObjectId
-  packageId  String          @db.ObjectId
-  pkg        ServicePackage  @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  text       String
-  sortOrder  Int             @default(0)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-  deletedAt  DateTime?
+  id                    String    @id @default(auto()) @map("_id") @db.ObjectId
+  serviceId             String    @db.ObjectId
+  service               Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  title                 String?
+  priceFrom             Int?
+  currency              String    @default("EUR")
+  description           String?
+  features              String[]  @default([])
+  badge                 String?
+  ctaLabel              String?
+  ctaHref               String?
+  isFeaturedOnLanding    Boolean   @default(false)
+  deliveryDays          Int?
+  isRecommended         Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  sortOrder             Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
 }
 
 model SiteConfig {

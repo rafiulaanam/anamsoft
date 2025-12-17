@@ -23,20 +23,21 @@ export type ServiceFormState = {
   id?: string;
 };
 
-export type ServicePackageWithItems = {
+export type ServicePackageWithFeatures = {
   id: string;
   serviceId: string;
-  name: string;
-  price: string;
+  title: string | null;
+  priceFrom: number | null;
   currency: string;
+  description: string | null;
+  features: string[];
+  badge: string | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+  isFeaturedOnLanding: boolean;
   deliveryDays: number | null;
   isRecommended: boolean;
   isActive: boolean;
   sortOrder: number;
-  items: {
-    id: string;
-    packageId: string;
-    text: string;
-    sortOrder: number;
-  }[];
+  updatedAt: string;
 };
