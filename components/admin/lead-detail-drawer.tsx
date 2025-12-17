@@ -221,7 +221,7 @@ export function LeadDetailDrawer({
 
   return (
     <Sheet open={open} onOpenChange={(value) => !value && onClose()}>
-      <SheetContent className="flex h-full w-full max-w-[480px] min-w-[360px] flex-col overflow-hidden pb-0 sm:max-w-[92vw]">
+      <SheetContent className="flex h-full w-full max-w-none min-w-[360px] flex-col overflow-hidden pb-0 sm:max-w-[92vw] md:max-w-[560px] lg:max-w-[640px] bg-white shadow-2xl">
         <div className="sticky top-0 z-20 border-b border-slate-100 bg-white/90 px-4 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -263,7 +263,7 @@ export function LeadDetailDrawer({
             />
           </div>
         </div>
-        <ScrollArea className="flex-1 px-4 pb-6 pt-5">
+        <ScrollArea className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-6 pt-5">
           <div className="space-y-6">
             <SectionCard title="Next action">
               <div className="grid gap-4 sm:grid-cols-2">

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 
 function notFound() {
   return NextResponse.json({ error: "Portfolio item not found" }, { status: 404 });
@@ -22,7 +23,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!existing) return notFound();
 
     const body = await req.json();
-    const { title, slug, type, description, imageUrl, demoUrl, isDemo } = body ?? {};
+    const { title, slug, type, description, imageUrl, demoUrl, isDemo, isPublished } = body ?? {};
 
     const updated = await prisma.portfolioItem.update({
       where: { id: params.id },
@@ -34,8 +35,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         imageUrl: imageUrl ?? existing.imageUrl,
         demoUrl: demoUrl ?? existing.demoUrl,
         isDemo: typeof isDemo === "boolean" ? isDemo : existing.isDemo,
+        isPublished: typeof isPublished === "boolean" ? isPublished : existing.isPublished,
       },
     });
+
+    revalidateTag("portfolio");
 
     return NextResponse.json({ data: updated });
   } catch (error: any) {
@@ -53,6 +57,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     if (!existing) return notFound();
 
     await prisma.portfolioItem.delete({ where: { id: params.id } });
+    revalidateTag("portfolio");
     return NextResponse.json({ data: { id: params.id } });
   } catch (error) {
     console.error("Error deleting portfolio item", error);

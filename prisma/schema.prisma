@@ -169,8 +169,22 @@ model PortfolioItem {
   imageUrl    String?
   demoUrl     String?
   isDemo      Boolean  @default(true)
+  isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model CaseStudy {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  industryLabel String
+  summary       String
+  coverImageUrl String?
+  slug          String   @unique
+  order         Int      @default(0)
+  isPublished   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Lead {
@@ -335,6 +349,29 @@ model SiteConfig {
   aiFeaturesEnabled    Boolean @default(false)
   aiDraftReplyEnabled  Boolean @default(false)
   sendDailySummaryEmails Boolean @default(false)
+}
+
+model Testimonial {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  subtitle    String?
+  quote       String
+  avatarUrl   String?
+  rating      Int?
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Faq {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  question    String
+  answer      String
+  sortOrder   Int      @default(0)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model ProjectEstimate {

@@ -20,6 +20,7 @@ interface PortfolioItem {
   imageUrl?: string | null;
   demoUrl?: string | null;
   isDemo: boolean;
+  isPublished: boolean;
 }
 
 export default function AdminPortfolioPage() {
@@ -28,7 +29,7 @@ export default function AdminPortfolioPage() {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PortfolioItem | null>(null);
-  const [form, setForm] = useState<Partial<PortfolioItem>>({ isDemo: true });
+  const [form, setForm] = useState<Partial<PortfolioItem>>({ isDemo: true, isPublished: true });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -53,7 +54,7 @@ export default function AdminPortfolioPage() {
 
   const openDialog = (item?: PortfolioItem) => {
     setEditing(item ?? null);
-    setForm(item ?? { isDemo: true });
+    setForm(item ?? { isDemo: true, isPublished: true });
     setDialogOpen(true);
     setMessage(null);
   };
@@ -74,6 +75,7 @@ export default function AdminPortfolioPage() {
         imageUrl: form.imageUrl ?? null,
         demoUrl: form.demoUrl ?? null,
         isDemo: typeof form.isDemo === "boolean" ? form.isDemo : true,
+        isPublished: typeof form.isPublished === "boolean" ? form.isPublished : true,
       };
       const res = await fetch(editing ? `/api/portfolio/${editing.id}` : "/api/portfolio", {
         method: editing ? "PATCH" : "POST",
@@ -129,19 +131,21 @@ export default function AdminPortfolioPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Demo?</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Demo?</TableHead>
+              <TableHead>Published?</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{item.title}</TableCell>
-                    <TableCell>{item.type}</TableCell>
-                    <TableCell>{item.isDemo ? "Yes" : "No"}</TableCell>
-                    <TableCell className="text-right space-x-2">
+                <TableCell>{item.type}</TableCell>
+                <TableCell>{item.isDemo ? "Yes" : "No"}</TableCell>
+                <TableCell>{item.isPublished ? "Yes" : "No"}</TableCell>
+                <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => openDialog(item)}>
                         Edit
                       </Button>
@@ -217,6 +221,14 @@ export default function AdminPortfolioPage() {
               onChange={(e) => setForm({ ...form, isDemo: e.target.checked })}
             />
             <Label htmlFor="isDemo">Demo item</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="isPublished"
+              checked={!!form.isPublished}
+              onChange={(e) => setForm({ ...form, isPublished: e.target.checked })}
+            />
+            <Label htmlFor="isPublished">Published</Label>
           </div>
           {message && <p className="text-sm text-rose-600">{message}</p>}
           <div className="flex justify-end gap-2 pt-2">

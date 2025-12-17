@@ -70,6 +70,12 @@ export default async function AdminOverviewPage() {
         <Button asChild variant="outline">
           <Link href="/admin/projects/new">New Project</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link href="/admin/testimonials">Testimonials</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/admin/faqs">FAQs</Link>
+        </Button>
       </div>
 
       <Card>

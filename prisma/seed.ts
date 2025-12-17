@@ -1,7 +1,59 @@
-import { Prisma, PrismaClient } from "@prisma/client";
+import {
+  DecisionMaker,
+  LeadPriority,
+  LeadStatus,
+  MeetingType,
+  Prisma,
+  PrismaClient,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+const defaultTestimonials = [
+  {
+    name: "Laura",
+    subtitle: "Lash & Brow Studio",
+    quote:
+      "The site looks elegant and makes it easy for clients to book from their phones. We had bookings coming in the first week after launch.",
+    rating: 5,
+  },
+  {
+    name: "Eglė",
+    subtitle: "Vilnius Salon",
+    quote: "Clear process, great communication, and a website that finally reflects our services.",
+    rating: 5,
+  },
+  {
+    name: "Monika",
+    subtitle: "Old Town Spa",
+    quote: "Our spa packages are clearer and clients love how easy it is to schedule online.",
+    rating: 4,
+  },
+];
+
+const defaultFaqs = [
+  {
+    question: "How long does it take to build a website?",
+    answer:
+      "Most salon websites take between 7–14 days after we finalise your content (text, photos and services). Larger projects may take longer.",
+  },
+  {
+    question: "Do I need to know anything technical?",
+    answer:
+      "No. I handle the technical side – domain, hosting, deployment. You just provide your salon information, services, prices and photos.",
+  },
+  {
+    question: "Can you update my site later if my prices or services change?",
+    answer:
+      "Yes. I offer simple update options and monthly care plans if you want me to handle changes for you.",
+  },
+  {
+    question: "Do you work only with salons in Vilnius?",
+    answer:
+      "I’m based in Vilnius and know the local market well, but I can work with salons and spas in other cities and countries as long as we can talk online.",
+  },
+];
 
 async function main() {
   const existingConfig = await prisma.siteConfig.findFirst();
@@ -24,6 +76,32 @@ async function main() {
           "At Anam Soft, I build modern, mobile-friendly websites for beauty salons, nail & hair studios, and spas in Vilnius so they can get more online bookings and loyal clients.",
         email: "hello@anamsoft.com",
         whatsapp: "+370 611 04553",
+      },
+    });
+  }
+
+  await prisma.testimonial.deleteMany({});
+  for (const [index, entry] of defaultTestimonials.entries()) {
+    await prisma.testimonial.create({
+      data: {
+        name: entry.name,
+        subtitle: entry.subtitle ?? null,
+        quote: entry.quote,
+        rating: entry.rating ?? null,
+        sortOrder: index,
+        isPublished: true,
+      },
+    });
+  }
+
+  await prisma.faq.deleteMany({});
+  for (const [index, entry] of defaultFaqs.entries()) {
+    await prisma.faq.create({
+      data: {
+        question: entry.question,
+        answer: entry.answer,
+        sortOrder: index,
+        isPublished: true,
       },
     });
   }
@@ -189,6 +267,7 @@ async function main() {
       description:
         "Clean, mobile-first site with service list, gallery, and clear book-now buttons tied to the studio’s booking system.",
       isDemo: true,
+      isPublished: false,
     },
     {
       title: "Old Town Spa & Wellness",
@@ -197,6 +276,7 @@ async function main() {
       description:
         "Calming site for a Vilnius Old Town spa with spa packages, treatments overview, gift vouchers, and directions.",
       isDemo: true,
+      isPublished: false,
     },
     {
       title: "Naujamiestis Hair & Nail Studio",
@@ -205,6 +285,7 @@ async function main() {
       description:
         "Modern site combining hair and nail services, price list, team section, and social media integration with fast mobile performance.",
       isDemo: true,
+      isPublished: false,
     },
   ];
 
@@ -231,7 +312,50 @@ async function main() {
     ),
   );
 
-  const leadSeeds = [
+  type LeadReference = { url: string; note?: string };
+
+  type LeadActivitySeed = {
+    type: string;
+    message: string;
+    metadata?: Record<string, unknown>;
+  };
+
+  type LeadSeed = {
+    fullName: string;
+    email: string;
+    phone?: string;
+    company?: string;
+    website?: string;
+    message: string;
+    source?: string;
+    serviceInterest?: string;
+    priority?: LeadPriority;
+    leadStatus?: LeadStatus;
+    unread?: boolean;
+    lastContactedAt?: Date;
+    nextFollowUpAt?: Date;
+    targetDeadline?: Date;
+    mustHaveFeatures?: string[];
+    referenceSites?: LeadReference[];
+    decisionMaker?: DecisionMaker;
+    meetingAt?: Date;
+    meetingType?: MeetingType;
+    meetingLink?: string;
+    qualificationNotes?: string;
+    bantBudgetConfirmed?: boolean;
+    bantAuthorityConfirmed?: boolean;
+    bantNeedConfirmed?: boolean;
+    bantTimelineConfirmed?: boolean;
+    leadScore?: number;
+    disqualifyReason?: string;
+    disqualifyNote?: string;
+    score?: number;
+    spamScore?: number;
+    tags?: string[];
+    activities?: LeadActivitySeed[];
+  };
+
+  const leadSeeds: LeadSeed[] = [
     {
       fullName: "Rasa New",
       email: "rasa@newlead.lt",
@@ -241,7 +365,6 @@ async function main() {
       source: "website_form",
       priority: "MEDIUM",
       leadStatus: "NEW",
-      budgetRange: "UNKNOWN",
       decisionMaker: "UNKNOWN",
       tags: ["Website"],
       activities: [{ type: "CREATED", message: "Lead captured from website form" }],
@@ -254,7 +377,6 @@ async function main() {
       source: "referral",
       priority: "HIGH",
       leadStatus: "IN_PROGRESS",
-      budgetRange: "BETWEEN_1000_AND_3000",
       decisionMaker: "DECISION_MAKER",
       lastContactedAt: new Date(),
       nextFollowUpAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2),
@@ -276,7 +398,6 @@ async function main() {
       meetingAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3),
       meetingType: "VIDEO",
       meetingLink: "https://meet.example.com/abc",
-      budgetRange: "BETWEEN_1000_AND_3000",
       decisionMaker: "INFLUENCER",
       tags: ["Follow-up"],
       activities: [
@@ -292,7 +413,6 @@ async function main() {
       source: "google_ads",
       priority: "HIGH",
       leadStatus: "QUALIFIED_TO_BUY",
-      budgetRange: "BETWEEN_3000_AND_6000",
       decisionMaker: "DECISION_MAKER",
       mustHaveFeatures: ["Booking", "CRM integration"],
       referenceSites: [{ url: "https://example.com", note: "Likes the layout" }],
@@ -316,7 +436,6 @@ async function main() {
       source: "google_ads",
       priority: "MEDIUM",
       leadStatus: "BAD_TIMING",
-      budgetRange: "BETWEEN_500_AND_1000",
       decisionMaker: "NEEDS_APPROVAL",
       nextFollowUpAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60),
       tags: ["Follow-up"],
@@ -330,7 +449,6 @@ async function main() {
       source: "referral",
       priority: "LOW",
       leadStatus: "NOT_A_FIT",
-      budgetRange: "UNDER_500",
       decisionMaker: "UNKNOWN",
       disqualifyReason: "Needs mobile app",
       disqualifyNote: "Out of scope",
@@ -355,17 +473,17 @@ async function main() {
         source: lead.source ?? "website_form",
         serviceInterest: lead.serviceInterest ?? null,
         serviceId: undefined,
-        priority: lead.priority as Prisma.LeadPriority,
-        leadStatus: lead.leadStatus as Prisma.LeadStatus,
+        priority: lead.priority ?? "MEDIUM",
+        leadStatus: lead.leadStatus ?? "NEW",
         unread: lead.unread ?? true,
         lastContactedAt: lead.lastContactedAt ?? null,
         nextFollowUpAt: lead.nextFollowUpAt ?? null,
         targetDeadline: lead.targetDeadline ?? null,
         mustHaveFeatures: lead.mustHaveFeatures ?? null,
         referenceSites: lead.referenceSites ?? null,
-        decisionMaker: (lead.decisionMaker as Prisma.DecisionMaker) ?? "UNKNOWN",
+        decisionMaker: lead.decisionMaker ?? "UNKNOWN",
         meetingAt: lead.meetingAt ?? null,
-        meetingType: lead.meetingType as Prisma.MeetingType,
+        meetingType: lead.meetingType ?? null,
         meetingLink: lead.meetingLink ?? null,
         qualificationNotes: lead.qualificationNotes ?? null,
         bantBudgetConfirmed: lead.bantBudgetConfirmed ?? false,

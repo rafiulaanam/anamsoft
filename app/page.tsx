@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { Button } from "@/components/ui/button";
-import { Accordion } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LocalBusinessSchema } from "@/components/seo/local-business-schema";
@@ -11,6 +16,11 @@ import { PricingSection } from "@/components/sections/pricing-section";
 import { ProjectEstimatorWizard } from "@/components/sections/project-estimator-wizard";
 import { ConsultationBookingSection } from "@/components/sections/consultation-booking-section";
 import { ScrollArea, ScrollBar, ScrollAreaViewport } from "@/components/ui/scroll-area";
+import type { PortfolioItem } from "@prisma/client";
+import { getPublishedFaqs, getPublishedTestimonials } from "@/lib/content/public";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 
 const steps = [
@@ -36,86 +46,40 @@ const steps = [
   },
 ];
 
-const faqs = [
-  {
-    id: "timeline",
-    question: "How long does it take to build a website?",
-    answer:
-      "Most salon websites take between 7–14 days after we finalise your content (text, photos and services). Larger projects may take longer.",
-  },
-  {
-    id: "tech",
-    question: "Do I need to know anything technical?",
-    answer:
-      "No. I handle the technical side – domain, hosting, deployment. You just provide your salon information, services, prices and photos.",
-  },
-  {
-    id: "updates",
-    question: "Can you update my site later if my prices or services change?",
-    answer:
-      "Yes. I offer simple update options and monthly care plans if you want me to handle changes for you.",
-  },
-  {
-    id: "location",
-    question: "Do you work only with salons in Vilnius?",
-    answer:
-      "I’m based in Vilnius and know the local market well, but I can work with salons and spas in other cities and countries as long as we can talk online.",
-  },
-];
-
-const testimonials = [
-  {
-    name: "Laura",
-    salon: "Lash & Brow Studio",
-    quote:
-      "The site looks elegant and makes it easy for clients to book from their phones. We had bookings coming in the first week after launch.",
-  },
-  {
-    name: "Eglė",
-    salon: "Vilnius Salon",
-    quote: "Clear process, great communication, and a website that finally reflects our services.",
-  },
-  {
-    name: "Monika",
-    salon: "Old Town Spa",
-    quote: "Our spa packages are clearer and clients love how easy it is to schedule online.",
-  },
-];
-
-const fallbackPortfolio = [
-  {
-    id: "fallback-p1",
-    title: "Vilnius Lash & Brow Studio",
-    type: "Lash & Brow Studio",
-    description:
-      "Clean, mobile-first site with service list, gallery, and clear book-now buttons tied to the studio’s booking system.",
-    demoUrl: "#",
-  },
-  {
-    id: "fallback-p2",
-    title: "Old Town Spa & Wellness",
-    type: "Day Spa",
-    description: "Calming site with spa packages, treatments overview, gift vouchers, and directions for visitors.",
-    demoUrl: "#",
-  },
-  {
-    id: "fallback-p3",
-    title: "Naujamiestis Hair & Nail Studio",
-    type: "Hair & Nail Salon",
-    description: "Modern site combining hair and nail services, price list, team section, and social media integration.",
-    demoUrl: "#",
-  },
-];
-
 export default async function HomePage() {
   const year = new Date().getFullYear();
 
   const siteConfig = (await prisma.siteConfig.findFirst()) ?? null;
-  const portfolioItems = await prisma.portfolioItem.findMany({ orderBy: { createdAt: "desc" } });
-
-  const portfolioList = portfolioItems.length ? portfolioItems : fallbackPortfolio;
   const email = siteConfig?.email ?? "hello@anamsoft.com";
   const whatsapp = siteConfig?.whatsapp ?? "+37061104553";
+  let portfolioItems: PortfolioItem[] = [];
+  try {
+    portfolioItems = await prisma.portfolioItem.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (error) {
+    console.error("Failed to load portfolio items", error);
+  }
+
+  let testimonialsData: Awaited<ReturnType<typeof getPublishedTestimonials>> = [];
+  try {
+    testimonialsData = await getPublishedTestimonials();
+  } catch (error) {
+    console.error("Failed to load testimonials", error);
+  }
+
+  let faqItems: { id: string; question: string; answer: string }[] = [];
+  try {
+    const faqs = await getPublishedFaqs();
+    faqItems = faqs.map((faq) => ({
+      id: faq.id,
+      question: faq.question,
+      answer: faq.answer,
+    }));
+  } catch (error) {
+    console.error("Failed to load FAQs", error);
+  }
 
   return (
     <main className="min-h-screen bg-blush-50">
@@ -402,34 +366,43 @@ export default async function HomePage() {
           <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Example salon & spa projects</h2>
           <p className="text-slate-600">Selected work for Vilnius-based beauty and wellness teams.</p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {portfolioList.map((project, idx) => (
-            <Card
-              key={project.id}
-              className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
-              <div className="relative p-5 space-y-3">
-                <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
-                  Case {idx + 1}
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-semibold text-slate-900">{project.title}</h3>
-                  <p className="text-sm font-medium text-blush-700">{project.type}</p>
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
-                <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-blush-50 via-white to-blush-100 border border-blush-100" />
-                {project.demoUrl ? (
+        {portfolioItems.length === 0 ? (
+          <p className="text-sm text-slate-600">Real case studies will appear here as soon as they are published in the admin.</p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {portfolioItems.map((item, idx) => (
+              <Card key={item.id} className="relative overflow-hidden hover:-translate-y-1 hover:shadow-xl">
+                <div className="absolute inset-0 bg-gradient-to-br from-white via-white to-blush-50" aria-hidden />
+                <div className="relative p-5 space-y-3">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-blush-100 text-blush-700 px-3 py-1 text-xs font-semibold">
+                    Case {idx + 1}
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-semibold text-slate-900">{item.title}</h3>
+                    <p className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500">{item.type}</p>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed">{item.description}</p>
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-blush-100 bg-blush-50">
+                    {item.imageUrl ? (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${item.imageUrl})` }}
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs uppercase tracking-[0.4em] text-blush-500">
+                        Image coming soon
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/15 via-transparent to-transparent" />
+                  </div>
                   <Button variant="outline" size="sm" className="hover:-translate-y-[1px]" asChild>
-                    <a href={project.demoUrl} target="_blank" rel="noreferrer">
-                      View project
-                    </a>
+                    <a href="#contact">Talk about a similar project</a>
                   </Button>
-                ) : null}
-              </div>
-            </Card>
-          ))}
-        </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Testimonials */}
@@ -439,15 +412,21 @@ export default async function HomePage() {
           <p className="text-slate-600">A few words from beauty and wellness teams.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((item) => (
-            <Card key={item.name} className="h-full">
-              <CardHeader>
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-                <CardDescription>{item.salon}</CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm text-slate-700 leading-relaxed">“{item.quote}”</CardContent>
-            </Card>
-          ))}
+          {testimonialsData.length === 0 ? (
+            <p className="text-sm text-slate-600">
+              No testimonials published yet — add them via <strong>Admin → Testimonials</strong>.
+            </p>
+          ) : (
+            testimonialsData.map((item) => (
+              <Card key={item.id} className="h-full">
+                <CardHeader>
+                  <CardTitle className="text-lg">{item.name}</CardTitle>
+                  {item.subtitle && <CardDescription>{item.subtitle}</CardDescription>}
+                </CardHeader>
+                <CardContent className="text-sm text-slate-700 leading-relaxed">“{item.quote}”</CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </section>
 
@@ -457,7 +436,33 @@ export default async function HomePage() {
           <h2 className="text-3xl sm:text-4xl font-semibold text-slate-900">Frequently asked questions</h2>
           <p className="text-slate-600">Straight answers about timelines, how we work, and updates.</p>
         </div>
-        <Accordion items={faqs} defaultOpenId="timeline" />
+        {faqItems.length === 0 ? (
+          <p className="text-sm text-slate-600">
+            FAQs will appear here once published via <strong>Admin → FAQs</strong>.
+          </p>
+        ) : (
+          <Accordion
+            type="single"
+            collapsible
+            className="space-y-3"
+            defaultValue={faqItems[0]?.id}
+          >
+            {faqItems.map((faq) => (
+              <AccordionItem
+                key={faq.id}
+                value={faq.id}
+                className="overflow-hidden rounded-2xl border border-slate-200 bg-white/80 shadow-[0_20px_40px_rgba(15,23,42,0.07)]"
+              >
+                <AccordionTrigger className="px-5 text-base font-semibold text-slate-900">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="px-5 text-sm text-slate-600">
+                  <p>{faq.answer}</p>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        )}
       </section>
 
       <ContactSection email={email} whatsapp={whatsapp} />

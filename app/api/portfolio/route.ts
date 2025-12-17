@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { title, slug, type, description, imageUrl, demoUrl, isDemo } = body ?? {};
+    const { title, slug, type, description, imageUrl, demoUrl, isDemo, isPublished } = body ?? {};
 
     if (!title || !slug || !type || !description) {
       return NextResponse.json({ error: "title, slug, type, and description are required" }, { status: 400 });
@@ -29,8 +30,11 @@ export async function POST(req: NextRequest) {
         imageUrl: imageUrl ?? null,
         demoUrl: demoUrl ?? null,
         isDemo: typeof isDemo === "boolean" ? isDemo : true,
+        isPublished: typeof isPublished === "boolean" ? isPublished : true,
       },
     });
+
+    revalidateTag("portfolio");
 
     return NextResponse.json({ data: item }, { status: 201 });
   } catch (error: any) {
